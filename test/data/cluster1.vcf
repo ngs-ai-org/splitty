@@ -1,0 +1,19 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##fileDate=2022-02-14
+##source=fusion2cvf, version 0.1.0
+##reference=hg38_p8.fa
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant",default="DNB">
+##INFO=<ID=MATEID,Number=1,Type=String,Description="the ID of the 2nd part from the BND events">
+##contig=<ID=2>
+##contig=<ID=13>
+##contig=<ID=17>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+2	321681	bnd1.1	G	G]17:198982]	6	PASS	SVTYPE=BND;MATEID=bnd1.2;
+2	321692	bnd2.1	T	]13:123466]T	6	PASS	SVTYPE=BND;MATEID=bnd2.2;
+2	321699	bnd4.1	T	G]13:123473]	6	PASS	SVTYPE=BND;MATEID=bnd4.2;
+13	123466	bnd2.2	C	C[2:321692[	6	PASS	SVTYPE=BND;MATEID=bnd2.1;
+13	123457	bnd3.1	A	[17:198993[A	6	PASS	SVTYPE=BND;MATEID=bnd3.2;
+13	123473	bnd4.2	G	T]2:321699]	6	PASS	SVTYPE=BND;MATEID=bnd4.1;
+17	198982	bnd1.2	A	A]2:321681]	6	PASS	SVTYPE=BND;MATEID=bnd1.1;
+17	198993	bnd3.2	C	[13:123457[C	6	PASS	SVTYPE=BND;MATEID=bnd3.1;

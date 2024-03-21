@@ -1,0 +1,4 @@
+chr2_mod	504886	504888	chr6_mod	492562	492564	sim_ff_1:bnd_SMAP2_2;	1	+	+	BND_PAIR
+chr6_mod	467452	506035	chr2_mod	497711	497713	sim_rr_2:bnd_SMAP2_1;sim_rr_2:bnd_SMAP3_1;	2	-	-	BND_PAIR
+chr6_mod	470476	544761	chr2_mod	500814	500816	sim_rf_4:bnd_SMAP2_1;sim_rf_4:bnd_SMAP5_1;sim_rf_4:bnd_SMAP11_1;	3	+	-	BND_PAIR
+chr2_mod	416889	497713	chr6_mod	499788	499790	sim_fr_3:bnd_SMAP9_2;sim_fr_3:bnd_SMAP1_2;	2	+	-	BND_PAIR

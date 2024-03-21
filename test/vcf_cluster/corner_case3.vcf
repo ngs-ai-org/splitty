@@ -1,0 +1,24 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=splitty:0.8.0
+##source_author=Emanuel Schmid-Siegert <emanuel.schmid-siegert@selexis.com>
+##command=splitty fragment --bam C1bc02-G60_regions.bam --reference ConcatenatedGenomeAndReference.fasta -k --vcf C1bc02-G60_fusions.vcf
+##INFO=<ID=MATEID,Number=1,Type=String,Description="the ID of the 2nd part from the BND events">
+##FILTER=<ID=SPLITTY_FAILED,Description="splitty events which are likely FP events : CIPOS >10 || CIPOS not determined">
+##INFO=<ID=GENE_FUSION,Number=.,Type=String,Description="Suggested fusion partner genes">
+##INFO=<ID=FRAG_ID,Number=1,Type=String,Description="Name of the queried fragment">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##contig=<ID=001369F,length=56846,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=002790F,length=23348,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=001369F-001-01,length=8057,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=002790F-001-01,length=5675,assembly=ConcatenatedGenomeAndReference.fasta>
+##command=vcf_bnd_merge --FileA C1bc02-G60_fusions.vcf --FileB C1bc02-G60_Integrations_splitty.vcf --out C1bc02-G60_combined.vcf --cipos 500
+##INFO=<ID=SDP,Number=1,Type=Integer,Description="Support Read Depth (SP+SR) of segment containing breakend">
+##INFO=<ID=SP,Number=1,Type=Integer,Description="Supporting split-pairs of gene-fusion">
+##INFO=<ID=SR,Number=1,Type=Integer,Description="Supporting split-reads of gene-fusion">
+##INFO=<ID=FR,Number=1,Type=Float,Description="SP to adjacent coverage ratio, lowest of both partners">
+##INFO=<ID=EVI,Number=1,Type=String,Description="EVIDENCE: HIGH, MIDDLE, LOW">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+002790F	24	NGSAI_GENEFUSION_FID.26.1	C	[001369F:56847[C	0	SPLITTY_FAILED	SVTYPE=BND;CIPOS=-32,32;GENE_FUSION=002790F--001369F;FRAG_ID=NODE_2234_length_693_cov_2.928571_g2145_i0;MATEID=NGSAI_GENEFUSION_FID.26.2;EVI=LOW
+001369F	56847	NGSAI_GENEFUSION_FID.26.2	A	[002790F:24[A	0	SPLITTY_FAILED	SVTYPE=BND;CIPOS=-32,32;GENE_FUSION=002790F--001369F;FRAG_ID=NODE_2234_length_693_cov_2.928571_g2145_i0;MATEID=NGSAI_GENEFUSION_FID.26.1;EVI=LOW

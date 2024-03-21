@@ -1,0 +1,22 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=splitty:0.8.0
+##source_author=Emanuel Schmid-Siegert <emanuel.schmid-siegert@selexis.com>
+##command=splitty fragment --bam C1bc02-G60_regions.bam --reference ConcatenatedGenomeAndReference.fasta -k --vcf C1bc02-G60_fusions.vcf
+##INFO=<ID=MATEID,Number=1,Type=String,Description="the ID of the 2nd part from the BND events">
+##FILTER=<ID=SPLITTY_FAILED,Description="splitty events which are likely FP events : CIPOS >10 || CIPOS not determined">
+##INFO=<ID=GENE_FUSION,Number=.,Type=String,Description="Suggested fusion partner genes">
+##INFO=<ID=FRAG_ID,Number=1,Type=String,Description="Name of the queried fragment">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##contig=<ID=000084F,length=7849016,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=001165F,length=54620,assembly=ConcatenatedGenomeAndReference.fasta>
+##command=vcf_bnd_merge --FileA C1bc02-G60_fusions.vcf --FileB C1bc02-G60_Integrations_splitty.vcf --out C1bc02-G60_combined.vcf --cipos 500
+##INFO=<ID=SDP,Number=1,Type=Integer,Description="Support Read Depth (SP+SR) of segment containing breakend">
+##INFO=<ID=SP,Number=1,Type=Integer,Description="Supporting split-pairs of gene-fusion">
+##INFO=<ID=SR,Number=1,Type=Integer,Description="Supporting split-reads of gene-fusion">
+##INFO=<ID=FR,Number=1,Type=Float,Description="SP to adjacent coverage ratio, lowest of both partners">
+##INFO=<ID=EVI,Number=1,Type=String,Description="EVIDENCE: HIGH, MIDDLE, LOW">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+000084F	5000	NGSAI_GENEFUSION_FID.792.1	T	]001165F:0]T	0	.	SVTYPE=BND;CIPOS=0,0;GENE_FUSION=000084F--001165F;FRAG_ID=NODE_14792_length_405_cov_1.484756_g14676_i0;MATEID=NGSAI_GENEFUSION_FID.792.2;EVI=MED
+001165F	0	NGSAI_GENEFUSION_FID.792.2	A	A[000084F:5000[	0	.	SVTYPE=BND;CIPOS=0,0;GENE_FUSION=000084F--001165F;FRAG_ID=NODE_14792_length_405_cov_1.484756_g14676_i0;MATEID=NGSAI_GENEFUSION_FID.792.1;EVI=MED

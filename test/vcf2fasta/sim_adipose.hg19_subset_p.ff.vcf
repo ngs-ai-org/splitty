@@ -1,0 +1,39 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=splitty:0.5.4
+##source_author=Emanuel Schmid-Siegert <emanuel.schmid-siegert@selexis.com>
+##command=target/x86_64-unknown-linux-gnu/release/splitty fragment --bam test/test_fragment/sim_adipose.hg19_subset_p.ff.bam --vcf out/sim_adipose.hg19_subset_p.ff.vcf --reference test/GRCh37.p13.genome.fa
+##INFO=<ID=MATEID,Number=1,Type=String,Description="the ID of the 2nd part from the BND events">
+##FILTER=<ID=SPLITTY_FAILED,Description="splitty events which are likely FP events : CIPOS >10 || CIPOS not determined">
+##INFO=<ID=GENE_FUSION,Number=.,Type=String,Description="Suggested fusion partner genes">
+##INFO=<ID=FRAG_ID,Number=1,Type=String,Description="Name of the queried fragment">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##contig=<ID=chr1,length=249250621,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr10,length=135534747,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr11,length=135006516,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr12,length=133851895,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr13,length=115169878,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr14,length=107349540,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr15,length=102531392,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr16,length=90354753,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr17,length=81195210,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr18,length=78077248,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr19,length=59128983,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr2,length=243199373,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr20,length=63025520,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr21,length=48129895,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr22,length=51304566,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr3,length=198022430,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr4,length=191154276,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr5,length=180915260,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr6,length=171115067,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr7,length=159138663,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr8,length=146364022,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chr9,length=141213431,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chrM,length=16569,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chrX,length=155270560,assembly=test/GRCh37.p13.genome.fa>
+##contig=<ID=chrY,length=59373566,assembly=test/GRCh37.p13.genome.fa>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+chr10	54074845	NGSAI_GENEFUSION_FID.1.1	G	G]chr1:178514347]	0	.	SVTYPE=BND;CIPOS=0,0;GENE_FUSION=chr10--chr1;FRAG_ID=DKK1|ENSG00000107984.5--C1orf220|ENSG00000213057.4;MATEID=NGSAI_GENEFUSION_FID.1.2
+chr1	178514347	NGSAI_GENEFUSION_FID.1.2	G	G]chr10:54074845]	0	.	SVTYPE=BND;CIPOS=0,0;GENE_FUSION=chr10--chr1;FRAG_ID=DKK1|ENSG00000107984.5--C1orf220|ENSG00000213057.4;MATEID=NGSAI_GENEFUSION_FID.1.1

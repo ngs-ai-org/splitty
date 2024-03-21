@@ -1,0 +1,69 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##fileDate=2022-08-31
+##source=Bionano Solve 3.7 variant annotation pipeline
+##command=bionano_vcf_converter.py -s Rare_SV/data/consensus_check/extension/sv/merged_smaps/SV_LOCI_merged_filter_inversions_overlap_rSizePercent50_maxTransDist50000.smap -n sim_rr_2 -o sim_rr_2 -b False --species_reference non_human
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=BNGTYPE,Number=.,Type=String,Description="Original BNG variant type from SMAP or CNV">
+##INFO=<ID=END,Number=1,Type=Integer,Description="End position of the variant described in this record">
+##INFO=<ID=MATEID,Number=.,Type=String,Description="ID of mate breakends">
+##INFO=<ID=SVLEN,Number=1,Type=Integer,Description="Difference in length between REF and ALT alleles">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Breakpoint uncertainty for start position POS">
+##INFO=<ID=CIEND,Number=2,Type=Integer,Description="Breakpoint uncertainty for end position END">
+##INFO=<ID=CT,Number=1,Type=String,Description="Breakpoint connection type">
+##INFO=<ID=EXPERIMENT,Number=1,Type=String,Description="experiment_id from dbVar submission of the experiment that generated this call">
+##INFO=<ID=SAMPLE,Number=1,Type=String,Description="sample_id from dbVar submission. Each call must have only one of either SAMPLE or SAMPLESET">
+##INFO=<ID=SAMPLESET,Number=1,Type=Integer,Description="sampleset_id from dbVar submission. Each call must have only one of either SAMPLE or SAMPLESET">
+##INFO=<ID=OVERLAPGENES,Number=.,Type=String,Description="Set of genes overlapped by structural variant">
+##INFO=<ID=NEARGENE,Number=1,Type=String,Description="Nearest non-overlapping gene">
+##INFO=<ID=NEARGENEDIST,Number=1,Type=Integer,Description="Distance to nearest non-overlapping gene">
+##INFO=<ID=DGVOVERLAPS,Number=1,Type=Integer,Description="Number of overlapped variants in DGV database">
+##INFO=<ID=INPARENTS,Number=1,Type=String,Description="Found in parents' datasets">
+##INFO=<ID=ISCN,Number=.,Type=String,Description="ISCN annotation">
+##INFO=<ID=UCSC1,Number=1,Type=String,Description="UCSC web link 1">
+##INFO=<ID=UCSC2,Number=1,Type=String,Description="UCSC web link 2">
+##INFO=<ID=SAMPLETYPE,Number=1,Type=String,Description="SV sample type in VAP pipeline">
+##INFO=<ID=ALG,Number=1,Type=String,Description="Algorithm used in VAP">
+##INFO=<ID=IMPRECISE,Number=0,Type=Flag,Description="Imprecise structural variation">
+##INFO=<ID=PCNTBNG,Number=1,Type=Float,Description="Percent of BNG control samples with SV">
+##INFO=<ID=PCNTBNGENZ,Number=1,Type=Float,Description="Percent of BNG control samples with the same enzyme with SV">
+##INFO=<ID=PCNTBNGHOM,Number=1,Type=Float,Description="Percent of BNG control samples with homozygous SV">
+##INFO=<ID=PCNTBNGHET,Number=1,Type=Float,Description="Percent of BNG control samples with heterozygous SV">
+##INFO=<ID=PCNTBNGSVAFR,Number=1,Type=Float,Description="Percent of AFR BNG control samples with SV">
+##INFO=<ID=PCNTBNGSVAMR,Number=1,Type=Float,Description="Percent of AMR BNG control samples with SV">
+##INFO=<ID=PCNTBNGSVEUR,Number=1,Type=Float,Description="Percent of EUR BNG control samples with SV">
+##INFO=<ID=PCNTBNGSVEAS,Number=1,Type=Float,Description="Percent of EAS BNG control samples with SV">
+##INFO=<ID=PCNTBNGSVSAS,Number=1,Type=Float,Description="Percent of SAS BNG control samples with SV">
+##INFO=<ID=PCNTBNGSVUNK,Number=1,Type=Float,Description="Percent of unknown BNG control samples with SV">
+##INFO=<ID=FAILCHIM,Number=1,Type=String,Description="Fail assembly chimeric score">
+##INFO=<ID=GENFUS,Number=0,Type=Flag,Description="Putative gene fusion">
+##INFO=<ID=INCTRLASSM,Number=0,Type=Flag,Description="Found in control sample assembly">
+##INFO=<ID=INPAIRCTRL,Number=0,Type=Flag,Description="Found in paired control sample CNVs">
+##INFO=<ID=INPARASSM,Number=1,Type=String,Description="Found in parents' assemblies">
+##INFO=<ID=ZYG,Number=1,Type=String,Description="Zygosity of SV">
+##INFO=<ID=ZYGPAIRASSM,Number=.,Type=String,Description="Zygosity in paired control sample assembly">
+##INFO=<ID=ZYGMASSM,Number=.,Type=String,Description="Zygosity in mother assembly">
+##INFO=<ID=ZYGFASSM,Number=.,Type=String,Description="Zygosity in father assembly">
+##INFO=<ID=SELFMOL,Number=0,Type=Flag,Description="Found in self molecules">
+##INFO=<ID=INCTRLMOL,Number=0,Type=Flag,Description="Found in paired control sample molecules">
+##INFO=<ID=PARMOL,Number=1,Type=String,Description="Found in parents' molecules">
+##INFO=<ID=SELFMOLCNT,Number=1,Type=String,Description="Self molecule count">
+##INFO=<ID=CTRLMOLCNT,Number=1,Type=String,Description="Paired control sample molecule count">
+##INFO=<ID=MMOLCNT,Number=1,Type=String,Description="Mother molecule count">
+##INFO=<ID=FMOLCNT,Number=1,Type=String,Description="Father molecule count">
+##ALT=<ID=DEL,Description="Deletion">
+##ALT=<ID=INS,Description="Insertion">
+##ALT=<ID=INV,Description="Inversion">
+##ALT=<ID=DUP,Description="Duplication">
+##ALT=<ID=BND,Description="Breakend">
+##FORMAT=<ID=GT,Number=1,Type=String,Description="Genotype">
+##FORMAT=<ID=CN,Number=1,Type=Integer,Description="Copy number genotype for imprecise events">
+##FORMAT=<ID=CNF,Number=1,Type=Float,Description="Fractional copy number for imprecise events">
+##FILTER=<ID=LowConfidence,Description="Does not meet minimum recommended confidence score for variant type">
+##FILTER=<ID=Masked,Description="Masked due to low quality in problematic calling regions">
+##reference=GCA_000001405.1
+##contig=<ID=chr2_mod,length=1000001>
+##contig=<ID=chr6_mod,length=1000001>
+##command_transforms=unittest
+##command_subset=unittest
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	sim_rr_2
