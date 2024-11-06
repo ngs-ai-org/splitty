@@ -5,7 +5,7 @@ It contains multiple algorithms for fusion detection as well as analysis of geno
 
 <img src="splitty.jpg" alt="drawing" width="200"/>
 
-Skippy will derive the position of integration/fusion based on alignment information. These can sometimes be unprecise due to
+Splitty will derive the position of integration/fusion based on alignment information. These can sometimes be unprecise due to
 
 - unprecise alignment towards the boards, especially for spliced elements
 - scoring, where placing in both junctions would result in identical scores
