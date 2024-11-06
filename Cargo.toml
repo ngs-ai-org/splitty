@@ -1,36 +1,37 @@
 [package]
-name    = "Splitty"
-version = "0.8.5"
+name    = "FusionR"
+version = "1.0.1"
 authors = ["Emanuel Schmid-Siegert <emanuel.schmid-siegert@selexis.com>"]
 edition = "2018"
 description   =  """
 This suite contains multiple tools and libraries to identifies gene fusions from BAM files.
 """
 readme  = "README.md"
-
+    
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 bambam = { git = "https://github.com/ebioman/bambam" }
-rustc-hash = { version = "1.0", default-features = true }
-rust-htslib = { version = "0.38.2", default-features = false }
-regex = "1"
+rustc-hash = { version = "2.0.0", default-features = true }
+rust-htslib = { version = "0.47.0", default-features = false }
+regex = "1.11.0"
 clap = "2.33.3"
 csv = "1.1.6"
 chrono = "0.4"
-rayon = "1.5"
+rayon = "1.10.0"
 crossbeam ="0.8.1"
 integer-sqrt="0.1.5"
 statistical = "1.0.0"
-noodles = { version = "0.6.0", features = ["bam","sam"] }
-indexmap = "1.7.0"
+noodles = { version = "0.83.0", features = ["bam","sam"] }
+indexmap = "2.6.0"
 linear-map = "1.2.0"
-bio = "0.39.0"
-tempfile = "3.3.0"
-itertools = "0.10.3"
-log = "0.4.17"
-pretty_env_logger = "0.3"
+bio = "2.0.3"
+tempfile = "3.13.0"
+itertools = "0.13.0"
+log = "0.4.22"
+pretty_env_logger = "0.5.0"
 human-sort = "0.2.2"
+bstr = "1.10.0"
 
 [[bin]]
 name = "splitty"
@@ -45,6 +46,10 @@ name = "vcf_sv_cluster"
 path="src/bin/vcf_bnd_cluster.rs"
 
 [[bin]]
+name = "cluster_test"
+path="src/bin/bio_based.rs"
+
+[[bin]]
 name = "vcf_sv_subset"
 path="src/bin/vcf_bnd_subset.rs"
 
@@ -55,6 +60,10 @@ path="src/bin/vcf_bnd_2fasta.rs"
 [[bin]]
 name = "vcf_chromremoval"
 path = "src/bin/vcf_chromremoval.rs"
+
+[[bin]]
+name = "read2vcf"
+path="src/bin/read2vcf.rs"
 
 [lib]
 name = "genefusion"

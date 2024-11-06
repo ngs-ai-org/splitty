@@ -223,7 +223,7 @@ mod tests {
     use std::iter::FromIterator;
     //use std::str::from_utf8;
     use tempfile::NamedTempFile;
-
+    use std::path::Path;
     #[test]
     fn full_test(){
         pretty_env_logger::init();
@@ -614,15 +614,16 @@ mod tests {
         let multi = false;
         let purge = false;  
         let tmp  = NamedTempFile::new().unwrap();
-        let path = tmp.path();
+        //let path = tmp.path();
+        let path = Path::new("/tmp/test.bedpe");
 
         bedpe_collapsed_pairs(collapsed_pairs,multi,purge,Some(path.to_str().unwrap())).expect("ERROR: could not generate the bedpe output!");
         //bedpe_collapsed_pairs(collapsed_pairs,multi,purge,None).expect("ERROR: could not generate the bedpe output!");
         
-        let bedpe_test = String::from("test/test_cluster/full_model.bedpe");
-        let comparison = is_same_file(&bedpe_test, path.to_str().unwrap());
+        let bedpe_test = Path::new("test/test_cluster/full_model.bedpe");
+        let comparison = is_same_file(&bedpe_test, path);
         assert_eq!(comparison.unwrap(),true);
-        std::fs::remove_file(path).unwrap();
+        //std::fs::remove_file(path).unwrap();
     }
 
 

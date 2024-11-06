@@ -19,9 +19,14 @@ Meaning it is < 0 or > contigSize. If that happens, the program will assign the 
 
 **Note**: The checks if positions are within contig boundaries is only enforced in the vcf format, not in the tsv format !
 
+
+Both, fragment and paired read fusion detection uses annotation to provide additional information of the involved genes (transcripts).
+Importantly, if a annotation file is present the notion for known fusions is `GeneA--GeneB` with `NA` for unknown elements e.g. `GeneA--NA`.
+If no annotation is present, this though replaced by the chromosome names, e.g. `ChrA--ChrB` or `ChrA--ChrA` and never defaulting to `NA`.
+
 ### Splitty fragment 
 
-It's main function is to predict and annotate fusion positions based on a contig alignment against a reference genome. There is not necessarily a limit to the length of an aligned contig but it is unlikely to work well on any given short reads. 
+It's main function is to predict and annotate fusion positions based on a contig alignment against a reference genome. There is not necessarily a limit to the length of an aligned contig but it is unlikely to work well on any given short reads.
 
 
 ```bash
@@ -257,6 +262,16 @@ OPTIONS:
     -v, --vcf <FILE>       a single vcf file to collapse and cluster entries
 
 ```
+
+Combinations:
+
+ - multiple samples = report unique names of samples in description and all the events for each sample;  score = number of samples with >= 1 observed event
+ - multiple samples + multi-only = report unique names of samples in description and all the events for each sample;  score = number of samples with **> 1** observed event
+ - multiple samples + purge = report unique names of samples in description **only 1 representative event** per sample ; score = number of samples with >= 1 observed event
+ - multiple samples + purge + multi-only =  report unique names of samples in description **only 1 representative event** per sample ; score = number of samples with **> 1** observed event
+ - single sample + multi-only = report unique name of sample in description and all the events for the sample ; score = number of events/reads supporting the sample
+ - single sample + purge = report unique name of sample in description **only 1 representative event** for the sample ; score = 1
+ - single sample + purge + multi-only = always empty result
 
 ### vcf_bnd_2fasta
 

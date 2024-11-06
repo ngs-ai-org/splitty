@@ -1,0 +1,21 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=splitty:0.8.8
+##source_author=Emanuel Schmid-Siegert <emanuel.schmid-siegert@selexis.com>
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##INFO=<ID=SDP,Number=1,Type=Integer,Description="Support Read Depth (SP+SR) of segment containing breakend">
+##INFO=<ID=SP,Number=1,Type=Integer,Description="Supporting split-pairs of gene-fusion">
+##INFO=<ID=SR,Number=1,Type=Integer,Description="Supporting split-reads of gene-fusion">
+##INFO=<ID=GENE_FUSION,Number=.,Type=String,Description="Suggested fusion partner genes">
+##INFO=<ID=FR,Number=1,Type=Float,Description="SP to adjacent coverage ratio, lowest of both partners">
+##INFO=<ID=MATEID,Number=1,Type=String,Description="the ID of the 2nd part from the BND events">
+##FILTER=<ID=SPLITTY_FAILED,Description="splitty events which are likely FP events : SDP == 1 | FR <=0.1 | CIPOS >10 | CIPOS not determined">
+##contig=<ID=Super-Scaffold_26,length=179461985,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=xxx1023_Hc,length=7498,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=xxx1023_Lc,length=6903,assembly=ConcatenatedGenomeAndReference.fasta>
+##INFO=<ID=INSILICO_SP,Number=1,Type=Integer,Description="Split read pairs after remapping, supporting the fusion point">
+##INFO=<ID=INSILICO_SR,Number=1,Type=Integer,Description="Split reads after remapping, supporting the fusion point">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+xxx1023_Hc	652	NGSAI_GENEFUSION_PID.122.1	A	]Super-Scaffold_26:147754673]A	0	.	SVTYPE=BND;CIPOS=0,0;SDP=94;SP=77;SR=17;FR=0.152778;GENE_FUSION=slx1023_Hc--Super-Scaffold_26;MATEID=NGSAI_GENEFUSION_PID.122.2;INSILICO_SP=14;INSILICO_SR=8
+Super-Scaffold_26	147754673	NGSAI_GENEFUSION_PID.122.2	T	T[xxx1023_Hc:652[	0	.	SVTYPE=BND;CIPOS=0,0;SDP=94;SP=77;SR=17;FR=0.152778;GENE_FUSION=slx1023_Hc--Super-Scaffold_26;MATEID=NGSAI_GENEFUSION_PID.122.1;INSILICO_SP=14;INSILICO_SR=8

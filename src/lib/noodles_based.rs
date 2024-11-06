@@ -1,17 +1,20 @@
+use noodles::sam::alignment::record::data::field::Tag;
 use rustc_hash::FxHashMap;
 use std::str;
 use regex::Regex;
 use std::fs::File;
-use crossbeam::channel::{unbounded};
+use crossbeam::channel::unbounded;
 use rayon;
-use log::{debug};
+use log::debug;
+use bstr::{self, ByteSlice};
+use noodles::sam::header::record::value::{map::ReferenceSequence, Map};
 
 extern crate noodles;
-use noodles::bam as noodle_bam;
-use noodles::sam as noodle_sam;
-use indexmap::{IndexMap};
 
+use indexmap::IndexMap;
 
+use crate::lib::noodles_based::noodles::bam::io::Reader;
+//use crate::lib::noodles_based::noodles::sam::header::record::value::map::reference_sequence;
 use crate::lib::common::{*};
 
 
@@ -26,23 +29,21 @@ use crate::lib::common::{*};
 /// Unittest: FALSE
 ///
 pub fn read_qc_module_paired_noodles(
-    entry: &noodle_bam::record::Record,
+    entry: &noodles::bam::record::Record,
     black_list: &Option<FxHashMap<String, i32>>
 ) -> bool {
-    let name = str::from_utf8(
-        entry.read_name().expect("ERROR: could not extract read name!")
-        .to_bytes()).expect("ERROR: could not convert ref name to string!").to_string();
+    let name = entry.name().expect("ERROR: could not extract read name!");
     let flags = entry.flags();
-    if !flags.is_paired() {
+    if !flags.is_segmented() {
         eprintln!("ERROR: Alignments are not paired-reads!");
     }
     let on_black_list = match black_list {
         Some(x) => {
-            x.contains_key(&name)
+            x.contains_key(&name.to_string())
         },
         None => false
     };
-    !(!flags.is_paired() || flags.is_secondary() || flags.is_unmapped() || on_black_list)
+    !(!flags.is_segmented() || flags.is_secondary() || flags.is_unmapped() || on_black_list)
 }
 
 
@@ -55,15 +56,13 @@ pub fn read_qc_module_paired_noodles(
 ///Unittest: FALSE
 ///
 pub fn analyze_basic_sa_for_fusion_noodles(
-    seq_local: &IndexMap<String,noodle_sam::header::ReferenceSequence> ,
-    sa_entry: &str,
-    record: &noodle_bam::record::Record,
+    seq_local: &IndexMap<bstr::BString, Map<ReferenceSequence>>,//&IndexMap<String,noodle_sam::header::ReferenceSequence> ,
+    sa_entry: &bstr::BStr,
+    record: &noodles::bam::record::Record,
     source: &str, sim: &f32
 ) -> bool {
 
-    let name   = str::from_utf8(
-        record.read_name().expect("ERROR: could not extract read name!")
-        .to_bytes()).expect("ERROR: could not convert ref name to string!").to_string();
+    let name   = record.name().expect("ERROR: could not extract read name!");
 
     // first identify the source accordingly
     let transcriptome_source : GtfSource = match source {
@@ -82,7 +81,7 @@ pub fn analyze_basic_sa_for_fusion_noodles(
     // Similarly, I am not even providing the possibility
     // to alter a ratio if both sides are clipped - not the goal
     // here - just put to None instead
-    let supp_infos = eval_supp_align(sa_entry,&name,None,None);
+    let supp_infos = eval_supp_align(&sa_entry.to_string(),&name.to_string(),None,None);
     debug!("Noodles supp_infos {:?}",&supp_infos);
     // depending on the source we need to
     // potentially collapse differently transcript to gene
@@ -94,11 +93,10 @@ pub fn analyze_basic_sa_for_fusion_noodles(
     let mut chr1  = record
         .reference_sequence_id()
         .map(|id| {
-            seq_local.get_index(i32::from(id) as usize)
-            .map(|(_,rs)| rs.name())
+            seq_local.get_index(id.unwrap() as usize)
+            .map(|(rn,_rs)| rn.to_str().unwrap())
             .expect("ERROR: missing reference sequence!")
         }).unwrap_or("*");
-    
 
 
     let mut chr2 : Vec<String> = Vec::new();
@@ -164,40 +162,6 @@ pub fn analyze_basic_sa_for_fusion_noodles(
 ///
 ///Unittest: TRUE
 /// 
-/// ```rust
-/// use crate::genefusion::lib::noodles_based::analyze_paired_alignments_from_trans_bam_noodles;
-/// pretty_env_logger::init();
-/// let identity = 98.0_f32;
-/// let threads = 2;
-/// let source = String::from("CHESS");
-/// let bam_file = "test/test_idFusionReads/Sim1-R0P0_1_readsOnTCata_miniSA.bam";
-/// assert_eq!(
-///     analyze_paired_alignments_from_trans_bam_noodles(
-///         bam_file,
-///         identity,
-///         &source,
-///         threads
-///     ),
-///     vec!["CCDC27|ENSG00000162592.4--CHST11|ENSG00000171310.6:2450525_1_29196_5022_133"]
-/// );
-/// ```
-/// 
-/// ```rust
-/// use crate::genefusion::lib::noodles_based::analyze_paired_alignments_from_trans_bam_noodles;
-/// pretty_env_logger::init();
-/// let identity = 98.0_f32;
-/// let threads = 2;
-/// let source = String::from("CHESS");
-/// let bam_file = "test/test_idFusionReads/Sim1-R0P0_1_readsOnTCata_miniSP.bam";
-/// assert_eq!(
-///     analyze_paired_alignments_from_trans_bam_noodles(
-///         bam_file,
-///         identity,
-///         &source,
-///         threads
-///     ),
-///     vec!["ABCG1|ENSG00000160179.14--GPSM3|ENSG00000213654.5:5202722_0_754_566_262"]
-/// );
 /// ```
 pub fn analyze_paired_alignments_from_trans_bam_noodles(
     bam_file: &str,
@@ -213,37 +177,35 @@ pub fn analyze_paired_alignments_from_trans_bam_noodles(
     };
 
     let mut reader = File::open(bam_file)
-        .map(noodle_bam::Reader::new)
+        .map(Reader::new)
         .expect("ERROR: could not open and read bam file!");
     
-    rayon::ThreadPoolBuilder::new().num_threads(threads).build_global().unwrap();
+    rayon::ThreadPoolBuilder::new().num_threads(threads);
     eprintln!("Current thread-pool number: {:?}",rayon::current_num_threads());
     
-    // for noodles we always need first to initialize the header
-    // end then in the next step the sequences otherwise we get
-    // strange errors - this is though intentional
-    match reader.read_header(){
-        Ok(_) => (),
-        Err(_) => panic!("ERROR: could not read header!"),
-    };
+    // // for noodles we always need first to initialize the header
+    // // end then in the next step the sequences otherwise we get
+    // // strange errors - this is though intentional
+    // match reader.read_header(){
+    //     Ok(_) => (),
+    //     Err(_) => panic!("ERROR: could not read header!"),
+    // };
 
-    let sequences : IndexMap<String, noodle_sam::header::ReferenceSequence> = match reader.read_reference_sequences() {
-        Ok(n) =>  n,
-        Err(_) => panic!("ERROR: could not get ref sequence!"),
-    };
+    let binding =reader.read_header().expect("ERROR: could not access the header of the BAM reads!");
+    let seq_dic = binding.reference_sequences();
     
+    //let sequences : IndexMap<String, noodles::sam::header::ReferenceSequence> = seq_dic.iter().map(|x,y|)
     let (snd, rxv) = unbounded();
     rayon::scope( |child| {
         for record in reader.records(){
+            
             let snd_local = snd.clone();
-            let seq_local = &sequences;
+            let seq_local = &seq_dic;
             let transcriptome_source_local = &transcriptome_source;
             child.spawn( move |_| {
                 let read = record.expect("ERROR: could not extract BAM record!");
                 let blacklist : Option<FxHashMap<String, i32>> = None;
-                let tmp_result   = str::from_utf8(
-                    read.read_name().expect("ERROR: could not extract read name!")
-                    .to_bytes()).expect("ERROR: could not convert ref name to string!").to_string();
+                let tmp_result   = read.name().expect("ERROR: could not extract read name!").to_string();
                 let flags = read.flags();
 
                 // here comes now the QC part.
@@ -258,21 +220,18 @@ pub fn analyze_paired_alignments_from_trans_bam_noodles(
                     // interesting otherwise we need to check read1 vs read2
                     // this is though tricky in noodles
                     // find here some hints: https://github.com/zaeleus/noodles/issues/15
-                    let data : FxHashMap<_,_>    = read
-                        .data()
-                        .fields()
-                        .map(|result| 
-                            result.map(
-                                |field| (field.tag().clone(), field )
-                            )
-                        )
-                        .collect::<Result<_,_>>()
-                        .expect("ERROR: could not access data fields of BAM entry!");
-                    if let Some(sa_entry) = data.get(&noodle_sam::record::data::field::tag::Tag::OtherAlignments){
-                        let value = sa_entry.value().as_str().expect("ERROR: could not convert SA field correctly!");
-                        sa_fusion = analyze_basic_sa_for_fusion_noodles(seq_local,value,&read, source ,&similarity);
+                    let read_data= read.data();
+                    let sa_value = read_data
+                        .get(&Tag::OTHER_ALIGNMENTS)
+                        .transpose().expect("ERROR cant get SA")
+                        .and_then(|value| match value {
+                            noodles::sam::alignment::record::data::field::Value::String(s) => Some(s),
+                            _ => None,
+                        });
+                    if sa_value.is_some(){
+                        sa_fusion = analyze_basic_sa_for_fusion_noodles(seq_local,sa_value.unwrap(),&read, source ,&similarity);
                         debug!("Noodles sa values {} ",&sa_fusion);
-                    };
+                    }
                     //  now we want to check if the mate is potentially mapped 
                     // onto another chromosome
                     // this takes some processing and we only do it if the
@@ -284,19 +243,20 @@ pub fn analyze_paired_alignments_from_trans_bam_noodles(
                         // this is pretty crazy mapping of mapping which I was
                         // not familiar with but got help : https://github.com/zaeleus/noodles/issues/55
                         let mut chr1  = read
-                            .reference_sequence_id()
-                            .map(|id| {
-                                seq_local.get_index(i32::from(id) as usize)
-                                .map(|(_,rs)| rs.name())
-                                .expect("ERROR: missing reference sequence!")
-                            }).unwrap_or("*");
+                                .reference_sequence_id()
+                                .map(|id| {
+                                    seq_local.get_index(id.unwrap() as usize)
+                                    .map(|(rn,_rs)| rn.to_str().unwrap())
+                                    .expect("ERROR: missing reference sequence!")
+                                }).unwrap_or("*");
+
                         let mut chr2  = read
-                            .mate_reference_sequence_id()
-                            .map(|id| {
-                                seq_local.get_index(i32::from(id) as usize)
-                                .map(|(_,rs)| rs.name())
-                                .expect("ERROR: missing reference sequence!")
-                            }).unwrap_or("*");
+                                .mate_reference_sequence_id()
+                                .map(|id| {
+                                    seq_local.get_index(id.unwrap() as usize)
+                                    .map(|(rn,_rs)| rn.to_str().unwrap())
+                                    .expect("ERROR: missing reference sequence!")
+                                }).unwrap_or("*");
                         if chr1 != "*" && chr2 != "*"{                       
                             match transcriptome_source_local {
                             GtfSource::CHESS   => {
@@ -338,12 +298,53 @@ pub fn analyze_paired_alignments_from_trans_bam_noodles(
                     }
                 }
             });
+
+            
         }
     });
     drop(snd);
-	let mut thread_results : Vec<std::string::String> = rxv.iter().collect();
+	let mut thread_results : Vec<std::string::String> = rxv.iter().map(|x|x.to_string()).collect();
     thread_results.sort_unstable();
     thread_results.dedup();
     thread_results
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn get_trans_test1(){
+        //pretty_env_logger::init();
+        let identity = 98.0_f32;
+        let threads = 2;
+        let source = String::from("CHESS");
+        let bam_file = "test/test_idFusionReads/Sim1-R0P0_1_readsOnTCata_miniSA.bam";
+        assert_eq!(
+            analyze_paired_alignments_from_trans_bam_noodles(
+                bam_file,
+                identity,
+                &source,
+                threads
+            ),
+            vec!["CCDC27|ENSG00000162592.4--CHST11|ENSG00000171310.6:2450525_1_29196_5022_133"]
+        );
+    }
+    #[test]
+    fn get_trans_test2(){
+        //pretty_env_logger::init();
+        let identity = 98.0_f32;
+        let threads = 2;
+        let source = String::from("CHESS");
+        let bam_file = "test/test_idFusionReads/Sim1-R0P0_1_readsOnTCata_miniSP.bam";
+        assert_eq!(
+            analyze_paired_alignments_from_trans_bam_noodles(
+                bam_file,
+                identity,
+                &source,
+                threads
+            ),
+            vec!["ABCG1|ENSG00000160179.14--GPSM3|ENSG00000213654.5:5202722_0_754_566_262"]
+        );
+    }
+     
+}

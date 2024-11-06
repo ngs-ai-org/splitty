@@ -384,7 +384,7 @@ mod tests {
     //use genefusion::lib::hts_lib_based::{*};
     //use bio::data_structures::interval_tree::{*};
     use crate::subset_vcf_bnd;
-
+    use std::path::Path;
 
     // Note: the file test/vcf_subset/all_bundled_unidir.bedpe
     // and the directional was generated with 100kbp extend
@@ -418,8 +418,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_rr_uni_2.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_rr_uni_2.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -442,8 +442,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_ff_uni_2.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_ff_uni_2.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -466,8 +466,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_rf_uni_4.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_rf_uni_4.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         //std::fs::remove_file(out_vcf).unwrap();
 
@@ -490,8 +490,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_fr_uni_3.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_fr_uni_3.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -515,8 +515,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/manual_corncercase1.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/manual_corncercase1.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -543,8 +543,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_rr_dir_2.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_rr_dir_2.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -567,8 +567,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_ff_dir_2.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_ff_dir_2.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -591,8 +591,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_rf_dir_4.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_rf_dir_4.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -615,8 +615,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_fr_dir_3.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test1/manual_fr_dir_3.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -647,8 +647,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test2/manual_rr_dir_2.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test2/manual_rr_dir_2.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -671,8 +671,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test2/manual_ff_dir_1.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test2/manual_ff_dir_1.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -695,8 +695,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test2/manual_rf_dir_4.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test2/manual_rf_dir_4.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 
@@ -719,8 +719,8 @@ mod tests {
 
         let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
         subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test2/manual_fr_dir_3.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
+        let vcf_test = Path::new("test/vcf_subset/test2/manual_fr_dir_3.vcf");
+        let comparison = is_same_file(&vcf_test, Path::new(&out_vcf));
         assert_eq!(comparison.unwrap(),true);
         std::fs::remove_file(out_vcf).unwrap();
 

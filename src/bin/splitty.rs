@@ -86,7 +86,10 @@ fn run_fragment_base(
         let ref_file        = matches.value_of("REF").unwrap_or("NONE");
         let vcf_file        = matches.value_of("VCF").unwrap_or("NONE");
         let multi_mapper    = matches.is_present("MULTI");
-        let ratio           = Some(matches.value_of("RATIO").unwrap().parse::<f32>().expect("ERROR: could not parse ratio value"));
+        let ratio           = match matches.value_of("RATIO").unwrap().parse::<f32>().expect("ERROR: could not parse ratio value"){
+            0.0 => None,
+            x => Some(x)
+        };
 
         if matches.is_present("KEEP") {
             keep_all = true;
@@ -202,12 +205,14 @@ fn run_fragment_base(
         
         // next we format correctly our output and annotate if a 
         // annotation was provided
+        debug!("read_collection: {:?}, gtf: {:?}",pruned_reads,annot_map);
         let final_collection: Vec<PrincipleReadBasedFusionOutput>  = format_and_annotate_read_based_fusions(
             pruned_reads,
-            annot_map, stranded,
+            annot_map, 
+            stranded,
             intra_dist
         );
-        
+        debug!("final_collection: {:?}",final_collection);
         // last but not least we write our output
         match vcf_file {
             "NONE" => { 
@@ -392,7 +397,7 @@ fn run_paired_base(
         debug!("Final colection: {:?}", final_collection);
         // generate our principle tsv table
         debug!("Now writing TSV output");
-        write_pos_based_tsv_stdout(&final_collection,crate_version!(),crate_authors!(),arg_string).expect("ERROR: failed to write results!");
+        //write_pos_based_tsv_stdout(&final_collection,crate_version!(),crate_authors!(),arg_string).expect("ERROR: failed to write results!");
         // if requested as well the vcf
         if ref_file !="NONE" && vcf_file !="NONE"{
             debug!("Finally as well VCF generation");
@@ -558,7 +563,7 @@ fn main() {
                 .short("d")
                 .long("ratio")
                 .value_name("float")
-                .help("ratio of accepted 5' to 3' clipping (and other way around), 0-1")
+                .help("ratio of accepted 5' to 3' clipping (and other way around), 0.0 will deactivate check")
                 .takes_value(true)
                 .required(false)
                 .default_value("0.1"))
@@ -730,57 +735,205 @@ fn main() {
 }
 
 
-/*
+
 #[cfg(test)]
 mod tests {
+    //use std::collections::HashMap;
+
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use genefusion::lib::common::{*};
     use genefusion::lib::hts_lib_based::{*};
-    use crate::splitty;
+    use rustc_hash::FxHashMap;
+   // use crate::splitty;
+    use crate::StrandDirection::Rev;
+    use crate::StrandDirection::Fwd;
 
+    // convenience function as the data is used
+    // in multiple tests
+    // we have the fullFusion evidence, princpe fusion evidence non annotated, the GTF evidence and the annotated fusion evidence and one with annotation but nothing matching
+    fn build_basic_evidence () -> (FullFusionEvidence,PrincipleReadBasedFusionOutput,FxHashMap<String, Vec<Gtf>>,PrincipleReadBasedFusionOutput,PrincipleReadBasedFusionOutput){
+        let n1 = FullFusionEvidence { 
+            cigar_pr: String::from("15=1I169=14123N61=6233N103=50300N45=1I78=1I17=13610N95=1I5=33472N123=204S"), 
+            cigar_sa: String::from("715S137=1I66="), 
+            chrom_pr: String::from("chr3"), 
+            chrom_sa: String::from("chr3"), 
+            query_name: String::from("m64143_220818_104322/55640273/ccs;full_length_coverage=0;length=951;NpolyAremoved=32;FL"), 
+            query_length: 919, 
+            target_break_pr: 115520086, 
+            target_break_sa: 115792300, 
+            query_break_pr: 204, 
+            query_break_sa: 203, 
+            strand_pr: Rev, 
+            strand_sa: Rev, 
+            orient_pr_upstream: false, 
+            orient_sa_upstream: true, 
+            aln_start_pr: 115401638, 
+            aln_start_sa: 115792502, 
+            precision: Some(0), 
+            support: 1 
+        };
+        let n2 = PrincipleReadBasedFusionOutput { 
+            query_name: String::from("m64143_220818_104322/55640273/ccs;full_length_coverage=0;length=951;NpolyAremoved=32;FL"),
+            length: 919,
+            fusion_point: 203, 
+            fusion_genes: vec![String::from("chr3--chr3")], 
+            fp_fuzzy: Some(0), 
+            fusion_distance: Some(272214), 
+            a_chrom: String::from("chr3"), 
+            a_start: 115792300, 
+            a_end: 115792502, 
+            a_fp: 115792300,
+            a_strand: Rev,
+            b_chrom: String::from("chr3"),
+            b_start: 115401638,
+            b_end: 115520086,
+            b_strand: Rev,
+            b_fp: 115520086
+        };
+        // just the needed info, which is by default first gene_name
+        let mut n3 : FxHashMap<String, Vec<Gtf>> = FxHashMap::default();
+        let mut att : FxHashMap<String,String> =  FxHashMap::default();
+        att.insert(String::from("gene_name"), String::from("AC026341.1"));
+        let gtf_entry = Gtf { 
+            chromosome: String::from("chr3"), 
+            source: String::from("HAVANA"), 
+            feature: String::from("transcript"), 
+            start: 115147641,
+            end: 115564389,
+            score: String::from("."),
+            strand: Fwd,
+            frame: String::from("."),
+            attribute: att,
+        };
+        debug!("{:?}\n",n3);
+        n3.insert(String::from("chr3"), vec![gtf_entry]);
+        let n4 = PrincipleReadBasedFusionOutput { 
+            query_name: String::from("m64143_220818_104322/55640273/ccs;full_length_coverage=0;length=951;NpolyAremoved=32;FL"),
+            length: 919,
+            fusion_point: 203, 
+            fusion_genes: vec![String::from("NA--AC026341.1")], 
+            fp_fuzzy: Some(0), 
+            fusion_distance: Some(272214), 
+            a_chrom: String::from("chr3"), 
+            a_start: 115792300, 
+            a_end: 115792502, 
+            a_fp: 115792300,
+            a_strand: Rev,
+            b_chrom: String::from("chr3"),
+            b_start: 115401638,
+            b_end: 115520086,
+            b_strand: Rev,
+            b_fp: 115520086
+        };
+        let n5 = PrincipleReadBasedFusionOutput { 
+            query_name: String::from("m64143_220818_104322/55640273/ccs;full_length_coverage=0;length=951;NpolyAremoved=32;FL"),
+            length: 919,
+            fusion_point: 203, 
+            fusion_genes: vec![String::from("NA--NA")], 
+            fp_fuzzy: Some(0), 
+            fusion_distance: Some(272214), 
+            a_chrom: String::from("chr3"), 
+            a_start: 115792300, 
+            a_end: 115792502, 
+            a_fp: 115792300,
+            a_strand: Rev,
+            b_chrom: String::from("chr3"),
+            b_start: 115401638,
+            b_end: 115520086,
+            b_strand: Rev,
+            b_fp: 115520086
+        };
+        (n1, n2, n3,n4,n5)
+    }
 
-    // Note: the file test/vcf_subset/all_bundled_unidir.bedpe
-    // and the directional was generated with 100kbp extend
-
-    //////////////////////////////////////////////////////////////////////////
-    ///  Test1: tests if we have a proper expected subsetting,  //////////////
-    ///   both for uni-directional and directional with all     //////////////
-    ///   that should accordingly be reported and verified      //////////////
-    ///   against manual curated entries                        //////////////
-    //////////////////////////////////////////////////////////////////////////
-    /// 
-    /////////////////////////////////////////
-    ///       UNIDIRECTIONAL     ////////////
-    /////////////////////////////////////////
-    /// 
+    /// just a simple test to verify that we can get the gene-name from our function accordingly
     #[test]
-    fn test1_subset_unidir_rr() {
-        env_logger::init();
+    fn get_gene_name_simple1(){
+        // getting all the shared values from our convenience function
+        // no annotation here needed though
+        let (_fusion_evidence,_entry,gtf,_entr_annotated, _entry_nana) = build_basic_evidence();
+        let entry:FxHashMap<String,String>  = gtf.get("chr3").expect("ERROR: couldnt find chrom!")[0].attribute.clone();
+        let name= get_gene_name(&entry);
+        let truth= String::from("AC026341.1");
+        assert_eq!(name,truth);
+    }
+
+    /// just a simple test to verify that we can get the gene-name from our function accordingly
+    /// if no match is found
+    #[test]
+    fn get_gene_name_simple2(){
+        let entry:FxHashMap<String,String>  = FxHashMap::default();
+        let name= get_gene_name(&entry);
+        let truth= String::from("NA");
+        assert_eq!(name,truth);
+    }
+    //////////////////////////////////////////////////////////////////////////
+    /// test that the produced results from fragment annotations are good ////
+    //////////////////////////////////////////////////////////////////////////
+    #[test]
+    fn format_and_annotate_read_based_fusions_noannot() {
+        let mut read_collection: FxHashMap<String, Vec<FullFusionEvidence>> = FxHashMap::default();
+
+        // getting all the shared values from our convenience function
+        // no annotation here needed though
+        let (fusion_evidence,entry,_gtf,_entr_annotated, _entry_nana) = build_basic_evidence();
+        let mut truth_collection: Vec<PrincipleReadBasedFusionOutput> = Vec::new();
+        truth_collection.push(entry);
+        read_collection.insert(String::from("m64143_220818_104322/55640273/ccs;full_length_coverage=0;length=951;NpolyAremoved=32;FL") ,vec![fusion_evidence]);
         
-        let args = Args { name: "Bob".into() };
-        assert_eq!(main_body(args), Ok(()));
+        // prep finished, run function
+        let result = format_and_annotate_read_based_fusions(read_collection,None,false,10000);
+        assert_eq!(truth_collection,result);
+    }
+
+    #[test]
+    fn format_and_annotate_read_based_fusions_wannot() {
+        let mut read_collection: FxHashMap<String, Vec<FullFusionEvidence>> = FxHashMap::default();
+
+        // getting all the shared values from our convenience function
+        // no annotation here needed though
+        let (fusion_evidence,_entry,gtf,entr_annotated,_entry_nana) = build_basic_evidence();
+        let mut truth_collection: Vec<PrincipleReadBasedFusionOutput> = Vec::new();
+        truth_collection.push(entr_annotated);
+        read_collection.insert(String::from("m64143_220818_104322/55640273/ccs;full_length_coverage=0;length=951;NpolyAremoved=32;FL") ,vec![fusion_evidence]);
         
-        run_fragment_base(matches,&args_string);
 
-        let infos = &VersionInfo {
-            program: &String::from("bionano_translate"),
-            version: &String::from("0.0.0"),
-            author: &String::from("nobody"),
-            command: &String::from("unittest"),
-        };        
-        let bedpe_in = String::from("test/vcf_subset/all_bundled_unidir.bedpe");
-        let chrom_in = String::from("test/vcf_subset/chroms.txt");
-        let vcf_in   = String::from("test/data/manual_rr_2.vcf");
-        let out_vcf  = String::from("test/vcf_subset/check_rr_uni_2.vcf");
-        let contigs      = parse_chrom_file(&chrom_in);
+        //, gtf: Some({ }    
+        let result = format_and_annotate_read_based_fusions(read_collection,Some(gtf),false,10000);
+    
+        assert_eq!(truth_collection,result);
+    }
 
-        let tree =    svtree_from_bedpe(&bedpe_in,None,&contigs);
-        subset_vcf_bnd(&vcf_in, Some(&out_vcf), tree, false, infos).expect("ERROR: failed to subset the VCF file!");
-        let vcf_test = String::from("test/vcf_subset/test1/manual_rr_uni_2.vcf");
-        let comparison = is_same_file(&vcf_test, &out_vcf);
-        assert_eq!(comparison.unwrap(),true);
-        std::fs::remove_file(out_vcf).unwrap();
+    // this one assumes that there is actually annotation but it does not
+    // cover the region of interest, so the annotation in that case should be "NA--NA"
+    #[test]
+    fn format_and_annotate_read_based_fusions_lackingannot() {
+        let mut read_collection: FxHashMap<String, Vec<FullFusionEvidence>> = FxHashMap::default();
 
+        // getting all the shared values from our convenience function
+        // no annotation here needed though
+        let (fusion_evidence,_entry,_gtf,_entr_annotated,entry_nana) = build_basic_evidence();
+        let mut truth_collection: Vec<PrincipleReadBasedFusionOutput> = Vec::new();
+        truth_collection.push(entry_nana);
+        read_collection.insert(String::from("m64143_220818_104322/55640273/ccs;full_length_coverage=0;length=951;NpolyAremoved=32;FL") ,vec![fusion_evidence]);
+        
+        let gtf : FxHashMap<String, Vec<Gtf>> = FxHashMap::default();
+        let result = format_and_annotate_read_based_fusions(read_collection,Some(gtf),false,10000);
+        
+        assert_eq!(truth_collection,result);
+    }
+
+    // This one tests if the annotation works properly and adds a gene names intead
+    // of the chr3 annotations to the name
+    #[test]
+    fn add_fusion_annotation_read_based_1(){
+        // getting all the shared values from our convenience function
+        // no annotation here needed though
+        let (_fusion_evidence,entry,gtf,entr_annotated,_entry_nana) = build_basic_evidence();
+        println!("Whats the gtf {:?}",&gtf);
+        let annotated = add_fusion_annotation_read_based(entry,&Some(gtf),true); 
+        assert_eq!(vec![entr_annotated],annotated);
     }
 }
- */
+
+ 

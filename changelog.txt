@@ -1,0 +1,28 @@
+
+# Changelog
+## 1.0.1
+- hot fix for issue of ambigious fragment orientation of both pieces
+- update readme for cluster
+## 1.0.0
+- added more unittests for fragment orientation checks
+- replaced in code 5 and 3 oritentation with upstream and downstream for more clarity
+- novel improved method to evaluate orientation in case of fragments having multi clipping
+- novel possibility to shut-off clip ratio check for multi-clipping 
+- fixed a bug in fragment fusion point detection where FP point was shifted wrongly
+- annotation of fusions now NA for missing annotation for a feature but provided file. Chr for missing anntotation file
+## v0.9.1
+- fixed a unittest in vcf_sv_cluster 
+- changed the CI pipeline to use release for unittest due to unsolved error https://github.com/rust-bio/rust-htslib/issues/442
+## v0.9.0
+- updating all dependencies to latest versions, lots of changes in noodles 
+- adding possibility to add in vcf merge as well additional fields
+- return in vcf merge as well TOPREAD to track back identifiers
+- fixed bug where SP/SR and other fields returned in vcfmerge best value of each instead values of best one 
+- many small changes
+## v0.8.8
+- breaking change! Sample name in vcf_bnd_2fasta id of FASTA entries is removed as it breaks downstream programs
+## v0.8.7
+- added in vcf_bnd_2fasta the "simple" option to have simple names of the fasta entries
+## v0.8.6
+- added in VCF of fragments additional information concerning the position of the fusion on the fragment, similar to the TSV output
+

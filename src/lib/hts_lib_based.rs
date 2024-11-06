@@ -6,7 +6,7 @@ use std::error::Error;
 use linear_map::LinearMap;
 use std::collections::HashMap;
 use rust_htslib::bcf::header::Header;
-use rust_htslib::bcf::{Read as BcfRead};
+use rust_htslib::bcf::Read as BcfRead;
 use rust_htslib::bcf::{Format, Writer};
 use bio::io::fasta::IndexedReader;
 use std::str::from_utf8;
@@ -16,8 +16,7 @@ use itertools::Itertools;  // itertools = "0.10"
 use std::path::Path;
 use std::convert::TryInto;
 use std::convert::TryFrom;
-use log::{debug};
-
+use log::debug;
 //use common::{*};
 use crate::lib::common::{*};
 
@@ -107,6 +106,8 @@ pub fn read_qc_module_paired(
     }
 }
 
+
+
 /// This uses a BAM indexed reader to analyze the primary and SA alignments 
 /// It verifies that qc is good, gets the cigar and evaluates it
 /// Calls the function AlignInfos and eval_supp_align to extract the
@@ -162,7 +163,7 @@ pub fn analyze_alignments_from_bam(
                 // this returns now the structure CigarInfo
                 let cigar_format = format!("{}", record.cigar());
 
-                //dbg!(target_id);
+                
                 // one is via the NM tag and the other one is rather new and in the
                 // cigar string decoded in "=" and "X" for matches and mismatches
                 let mismatch     = match record.aux(b"NM") {
@@ -208,11 +209,12 @@ pub fn analyze_alignments_from_bam(
                     cigar:          cigar_format,
                     chrom:          tid.to_string(),
                     fp_target:      success_infos.fp_target,
-                    clip5:          success_infos.clip5,
-                    clip3:          success_infos.clip3,
+                    upstream:       success_infos.upstream,
+                    downstream:     success_infos.downstream,
                     similarity:     success_infos.similarity,
                     seq_length:     success_infos.seq_length,
                     match_length_s: success_infos.match_length_s,
+                    match_length:   success_infos.match_length,
                     fp_query:       success_infos.fp_query,
                     aln_start:      success_infos.aln_start,
                     aln_end:        success_infos.aln_end,
@@ -246,6 +248,7 @@ pub fn analyze_alignments_from_bam(
                 // The latter are a vector and we need to consider now each case
                 // individually for the next steps
                 let result: Vec<FullFusionEvidence> = evaluate_and_predict(prim_infos, supp_infos);
+                debug!("Gathered for a read all info {:?}",&result);
                 for combi in result.into_iter() {
                     debug!("Iterating over results, evaluating now {:?}",&combi);
                     // here we have to clone as we move otherwise part of combi
@@ -304,7 +307,7 @@ pub fn add_sp_to_sr_fusions(
             let chr_a   : &str = &fusion_copy.chrom_pr ;
             let chr_b   : &str = &fusion_copy.chrom_sa;
             // this depends now on orientation
-            if fusion_copy.orient_pr == 5 {
+            if fusion_copy.orient_pr_upstream == true {
                 if fusion_copy.strand_pr == StrandDirection::Fwd {
                     start_a = if range_sp > fusion_copy.target_break_pr { 0_u64 }else{ fusion_copy.target_break_pr - range_sp };
                     end_a   = fusion_copy.target_break_pr;
@@ -314,7 +317,7 @@ pub fn add_sp_to_sr_fusions(
                 }else {
                     panic!("ERROR: could not determine PR strand in SP function!");
                 }
-            }else if fusion_copy.orient_pr == 3 {
+            }else if fusion_copy.orient_pr_upstream == false {
                 if fusion_copy.strand_pr == StrandDirection::Fwd {
                     start_a = fusion_copy.target_break_pr;
                     end_a   = fusion_copy.target_break_pr + range_sp ;
@@ -328,7 +331,7 @@ pub fn add_sp_to_sr_fusions(
                 panic!("ERROR: could not determine PR orientation in SP function!");
             }
             // this depends now on orientation
-            if fusion_copy.orient_sa == 5 {
+            if fusion_copy.orient_sa_upstream == true {
                 if fusion_copy.strand_sa == StrandDirection::Fwd {
                     start_b = if range_sp > fusion_copy.target_break_sa { 0_u64 }else{ fusion_copy.target_break_sa - range_sp };
                     end_b   = fusion_copy.target_break_sa;
@@ -338,7 +341,7 @@ pub fn add_sp_to_sr_fusions(
                 }else {
                     panic!("ERROR: could not determine SA strand in SP function!");
                 }
-            }else if fusion_copy.orient_sa == 3 {
+            }else if fusion_copy.orient_sa_upstream == false {
                 if fusion_copy.strand_sa == StrandDirection::Fwd {
                     start_b = fusion_copy.target_break_sa;
                     end_b   = fusion_copy.target_break_sa + range_sp ;
@@ -521,7 +524,6 @@ pub struct AlleleInfo {
 /// use std::str::from_utf8;
 /// use tempfile::NamedTempFile;
 /// pretty_env_logger::init();
-
 /// let tmp = NamedTempFile::new().unwrap();
 /// let path = tmp.path();
 ///
@@ -530,7 +532,6 @@ pub struct AlleleInfo {
 /// let mut file_seq =  File::create("foo.fa").expect("ERROR:could not create seq file!");
 /// file_seq.write_all(b">chr1\nGTAGGCTGAAAA\nCCCGATTGACTA\nchr2\nCCCGATTGACTA\nGTAGGCTGAAAA").expect("ERROR:could not write seq file!");
 /// let assembly = String::from("foo.fa");
-/// let sample   = String::from("Sample1");
 /// 
 /// // index as well
 /// let mut file_idx =  File::create("foo.fa.fai").expect("ERROR:could not create idx file!");
@@ -549,7 +550,7 @@ pub struct AlleleInfo {
 /// let alleles: &[&[u8]] = &[b"T", b"T]chr1:6]"];
 /// record2.set_alleles(alleles).expect("Failed to set alleles");
 /// record2.set_pos(6);
-/// let fasta_record = vcfpair2fa_record(&record1,&record2,&assembly,10,&sample);
+/// let fasta_record = vcfpair2fa_record(&record1,&record2,&assembly,10);
 /// let empty_record = bio::io::fasta::Record::new();
 /// // delete file
 /// std::fs::remove_file("foo.fa").unwrap();
@@ -562,7 +563,6 @@ pub fn vcfpair2fa_record (
     entry2: &rust_htslib::bcf::Record,
     assembly: &str,
     range: u32,
-    sample: &str,
 ) -> bio::io::fasta::Record {
     // here we get botht the a and b nucleotide
     // for both of the alleles provided
@@ -629,7 +629,7 @@ pub fn vcfpair2fa_record (
     //dbg!(&allele2_desconstr);
     let id1        = String::from_utf8(entry1.id()).expect("ERROR: could not convert ID to utf8!"); 
     let id2        = String::from_utf8(entry2.id()).expect("ERROR: could not convert ID to utf8!"); 
-    let read_id    = format!("{}:{}--{}",sample,id1,id2);
+    let read_id    = format!("{}--{}",id1,id2);
     let read_desc  = format!("{}:{}-{}-{:?};{}:{}-{}-{:?}",
         &allele1_desconstr.chr,
         pos_11,
@@ -1038,7 +1038,7 @@ pub fn write_pos_based_vcf_file(
     Ok(())
 }
 
-/// # Read-based gene-fusion to BND entry
+/// #  gene-fusion to BND entry
 /// this simply takes basic information of a gene-fusion
 /// entry and will push write it as a vcf entry.
 /// to simplify things, the A entry = true, B entry = false. 
@@ -1081,6 +1081,8 @@ pub fn push_read_vcf (
     let allele_2 : String;
     let alleles  : [&[u8]; 2];
     let fusion_genes = entry.fusion_genes.iter().map(|x| x.as_bytes()).collect::<Vec<_>>();
+    // this determines the fusion position on the fragment
+    let frag_position: i32 = (entry.fusion_point +1 ).try_into().expect("ERROR: could not convert fusion point on fragment into i32");
 
     // generate and add attributes, concerning type and
     // uncertainty 
@@ -1094,7 +1096,8 @@ pub fn push_read_vcf (
     if entry.fp_fuzzy.is_none() || entry.fp_fuzzy.unwrap() > 10  {
         record.push_filter("SPLITTY_FAILED".as_bytes()).expect("ERROR: SPLITTY_PASSED not defined in VCF header!");
     }
-    
+    record.push_info_integer(b"FRAG_POS", &[frag_position]).expect("ERROR: Could not pass the fusion position of the fragment!");
+
     // now depending whether it is the first or the second one
     // in our pair we need to provide different information and
     // generate our 2nd allele
@@ -1167,7 +1170,9 @@ pub fn write_read_based_vcf_file(
     let header_fragid_line  = r#"##INFO=<ID=FRAG_ID,Number=1,Type=String, Description="Name of the queried fragment">"#;    
     let header_author_line= format!("{}{}",r#"##source_author="# ,infos.author);
     let header_filter_line  = r#"##FILTER=<ID=SPLITTY_FAILED, Description="splitty events which are likely FP events : CIPOS >10 || CIPOS not determined ">"#;
+    let header_fragpos_line = r#"##INFO=<ID=FRAG_POS,Number=1,Type=Integer, Description="Position of the fusion on the fragment">"#;    
     let header_cmd_line   = format!("{}{}",r#"##command="# ,infos.command);
+    
     vcf_header.push_record(header_source_line.as_bytes());
     vcf_header.push_record(header_author_line.as_bytes());
     vcf_header.push_record(header_cmd_line.as_bytes());
@@ -1177,6 +1182,8 @@ pub fn write_read_based_vcf_file(
     vcf_header.push_record(header_fragid_line.as_bytes());
     vcf_header.push_record(header_sv_line.as_bytes());
     vcf_header.push_record(header_ci_line.as_bytes());
+    vcf_header.push_record(header_fragpos_line.as_bytes());
+
     // The hasmap of the header contains all the typical fields
     // and we can get now the chromosomes for the VCF header
     let chroms = match bam_header.get("SQ"){
@@ -1336,7 +1343,7 @@ pub fn vcf_parsing_tree(
         let mut vcf_b      = rust_htslib::bcf::Reader::from_path(&file).expect("ERROR: could not open vcf file in fofn !");
         vcf_a.set_threads(threads).expect("ERROR: could not set correctly read threads");
         #[allow(unused_mut)]
-        let mut vcf_header = vcf_b.header().samples().to_vec();
+        let mut vcf_header: Vec<&[u8]> = vcf_b.header().samples();
         let sample : &str;
         if vcf_header.len() > 1 {
             panic!("ERROR: Currently only single sample vcf accepted!");
@@ -1744,7 +1751,9 @@ pub fn vcf_combine_a_and_b(
     full_vcf_b: & mut FxHashMap<String,rust_htslib::bcf::Record>,
     vcf: & mut rust_htslib::bcf::Writer,
     simple: &bool,
-    simple_flag: &Option<&str>
+    simple_flag: &Option<&str>,
+    info_fields: &Vec<&str>,
+    //info_frmt: &Vec<&str>
 ){
     let mut seen_b : FxHashMap<String,bool> = FxHashMap::default();
     for entry in simpl_vcf_a_modified {
@@ -1761,6 +1770,8 @@ pub fn vcf_combine_a_and_b(
                     record_a.push_info_string(b"EVI",&["LOW".as_bytes()]).expect("ERROR: could not set CONF field!");    
                 }else{
                     record_a.push_info_string(b"EVI",&["MED".as_bytes()]).expect("ERROR: could not set CONF field!");
+                    record_a.remove_filter("SPLITTY_FAILED".as_bytes(),false).expect("ERROR: could not remove SPLITTY_FAILED filter!");
+
                 };
             }
         // if there is a matching b entry    
@@ -1768,31 +1779,43 @@ pub fn vcf_combine_a_and_b(
             record_a.push_info_string(simple_flag.unwrap().as_bytes(),&["1".as_bytes()]).expect("ERROR: could not set CONF field!");
         }else{
             let conf_a = match record_a.has_filter("SPLITTY_FAILED".as_bytes()) {
-                true  => "MED",
-                false => "LOW",
+                false  => "MED",
+                true => "LOW",
             };
             // if we have evidence beyond n=1 then
             // sum them up.
             // Important: if one changes the order it
             // will become 0 for all of them
-            let mut sdp = vec![0];
-            let mut sp  = vec![0];
-            let mut sr  = vec![0];
-            let mut fr  = vec![0f32];
+            let mut sdp = Vec::new();
+            let mut sp  = Vec::new();
+            let mut sr  = Vec::new();
+            let mut fr  = Vec::new();
+            let mut ev: Vec<Vec<u8>> = Vec::new();
+            // this is for our new pass-through fields
+            let mut i_fields: Vec<Vec<i32>> = Vec::new();
+
             let mut conf_b = "LOW" ;
             if record_a.info(b"SDP").integer().unwrap().is_some() {
                 panic!("ERROR: please change File1 and File2");
             }
+            // now lets have a look at the entries from b which match
             for b_entry in entry.b_matches {
                 let record_b = full_vcf_b.get_mut(&b_entry).expect("ERROR: could not recover vcf entry from full_vcf_a");
                 vcf.translate(record_b);
                 // here it could happend that we have once low and once med
                 // and would override old value
                 conf_b = match record_b.has_filter("SPLITTY_FAILED".as_bytes()) {
-                    true  => "MED",
-                    false => "LOW",
+                    false  => "MED",
+                    true => "LOW",
                 };
-                if record_b.info(b"SDP").integer().unwrap().is_some() {
+              
+                ev.push(record_b.id());
+                let mut tmp_fields : Vec<i32> = Vec::new();
+                for i_field in info_fields.iter(){
+                    tmp_fields.push(record_b.info(i_field.as_bytes()).integer().unwrap().unwrap()[0]);
+                };
+                i_fields.push(tmp_fields);
+                if record_b.info(b"SR").integer().unwrap().is_some() {
                     sdp.push(record_b.info(b"SDP").integer().unwrap().unwrap()[0]);
                     sp.push(record_b.info(b"SP").integer().unwrap().unwrap()[0]);
                     sr.push(record_b.info(b"SR").integer().unwrap().unwrap()[0]);
@@ -1800,28 +1823,35 @@ pub fn vcf_combine_a_and_b(
                 }else {
                     panic!("ERROR: please change File1 and File2");
                 }
-                seen_b.insert(b_entry,true);
+                seen_b.insert(b_entry,true);             
             }
-            // now we sort and keep the highest one
-            sdp.sort_unstable();
-            sp.sort_unstable();
-            sr.sort_unstable();
-            fr.sort_by(|a, b| a.partial_cmp(b).unwrap());
+            // now we sort and keep the highest one for split reads as it is the 
+            // most informative for this purpose
+            let my_max = sr.iter().position_max().unwrap();
+              // now we collect the interesting values
+            let id1 = &ev[my_max] ;
+            let id      = str::from_utf8(&id1).expect("ERROR: cant extract record id!");
+            
             // now we should not just add them up as they are predominantly the same reads
-            record_a.push_info_integer(b"SDP",&[sdp.pop().expect("ERROR: no element left to pop!")]).expect("ERROR: could not push SDO info!");
-            record_a.push_info_integer(b"SP",&[sp.pop().expect("ERROR: no element left to pop!")]).expect("ERROR: could not push SP info!");
-            record_a.push_info_integer(b"SR",&[sr.pop().expect("ERROR: no element left to pop!")]).expect("ERROR: could not push SR info!");
-            record_a.push_info_float(b"FR",&[fr.pop().expect("ERROR: no element left to pop!")]).expect("ERROR: could not push FR info!");
+            record_a.push_info_string(b"TOPREAD",&[id.as_bytes()]).expect("ERROR: could not push TOPREAD info!");
+            record_a.push_info_integer(b"SDP",&[sdp[my_max]]).expect("ERROR: could not push SDO info!");
+            record_a.push_info_integer(b"SP",&[sp[my_max]]).expect("ERROR: could not push SP info!");
+            record_a.push_info_integer(b"SR",&[sr[my_max]]).expect("ERROR: could not push SR info!");
+            record_a.push_info_float(b"FR",&[fr[my_max]]).expect("ERROR: could not push FR info!");
+            for (n,element) in info_fields.iter().enumerate() {
+                record_a.push_info_integer(element.as_bytes(),&[i_fields[my_max][n]]).expect("ERROR: could not push SR info!");
+            }
             let final_conf = match(conf_a,conf_b){
                 ("LOW","LOW") => "MED",
                 _ => "HIGH",
             };
-            // remove now the obsolete filter field as it is actually high evidence now
+            // remove now the obsolete filter field as it is actually stronger evidence now
             record_a.remove_filter("SPLITTY_FAILED".as_bytes(),true).expect("ERROR: could not remove SPLITTY_FAILED filter!");
             record_a.push_info_string(b"EVI",&[final_conf.as_bytes()]).expect("ERROR: could not set CONF field!");
         
         }
         vcf.write(record_a).expect("ERROR: could not write vcf entry!");
+
     }
     // now iterate over b and check if already seen 
     // otherwise write, too
@@ -1839,6 +1869,8 @@ pub fn vcf_combine_a_and_b(
                     record.push_info_string(b"EVI",&["LOW".as_bytes()]).expect("ERROR: could not set CONF field!");    
                 }else{
                     record.push_info_string(b"EVI",&["MED".as_bytes()]).expect("ERROR: could not set CONF field!");
+                    record.remove_filter("SPLITTY_FAILED".as_bytes(),false).expect("ERROR: could not remove SPLITTY_FAILED filter!");
+
                 }
                 vcf.write(record).expect("ERROR: could not write vcf entry!");
             }
@@ -2006,7 +2038,9 @@ pub fn prepare_out_vcf(
     // author: &str, 
     // command: &str,
     simple: &bool,
-    simple_flag: &Option<&str>
+    simple_flag: &Option<&str>,
+    info_fields: &Vec<&str>,
+    //info_frmt: &Vec<&str>
 ) -> rust_htslib::bcf::Writer {
 
     //////////////////////////////
@@ -2015,6 +2049,7 @@ pub fn prepare_out_vcf(
     let vcf_a      = rust_htslib::bcf::Reader::from_path(file_a).expect("ERROR: could not open vcf file A !");
     let vcf_b      = rust_htslib::bcf::Reader::from_path(file_b).expect("ERROR: could not open vcf file B !");
     let mut vcf_header    = Header::from_template(vcf_a.header());
+    
     // this are already the fields which we expect, if empty we will generate
     // essentially lots of whitespace in vcf but no harm done
     let header_sv_line      = r#"##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">"#;
@@ -2022,15 +2057,24 @@ pub fn prepare_out_vcf(
     let header_source_line= format!("{}:{}",r#"##source=splitty"# ,infos.version);
     let header_mateid_line  = r#"##INFO=<ID=MATEID,Number=1,Type=String,Description="the ID of the 2nd part from the BND events">"#;
     let header_gf_line      = r#"##INFO=<ID=GENE_FUSION,Number=.,Type=String, Description="Suggested fusion partner genes">"#;    
+    let header_topread_line = r#"##INFO=<ID=TOPREAD,Number=.,Type=String, Description="PID with strongest support">"#;    
     let header_author_line= format!("{}{}",r#"##source_author="# ,infos.author);
     let header_cmd_line   = format!("{}{}",r#"##command="# ,infos.command);
     vcf_header.push_record(header_source_line.as_bytes());
     vcf_header.push_record(header_author_line.as_bytes());
     vcf_header.push_record(header_cmd_line.as_bytes());
+    vcf_header.push_record(header_topread_line.as_bytes());
     vcf_header.push_record(header_mateid_line.as_bytes());
     vcf_header.push_record(header_gf_line.as_bytes());
     vcf_header.push_record(header_sv_line.as_bytes());
     vcf_header.push_record(header_ci_line.as_bytes());
+
+    // adding the provided INFO fields
+    for (_n,field) in info_fields.iter().enumerate(){
+        //let frmt = info_frmt[n];
+        let header_inf_line = format!("##INFO=<ID={field},Number=1,Type=Integer,Description=\"none\">");
+        vcf_header.push_record(header_inf_line.as_bytes());
+    } 
 
     // the next lines are specific for splitty input
     if !simple {
@@ -2111,6 +2155,8 @@ pub fn prepare_out_vcf(
 
 #[cfg(test)]
 mod tests {
+    
+
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
     //use bio::io::fasta::IndexedReader;  
@@ -2336,9 +2382,9 @@ mod tests {
             // strand of SA
             strand_sa: StrandDirection::Rev,
             // placement of primary match in fusion can be 5 or 3
-            orient_pr: 3_u32,
+            orient_pr_upstream: false,
             // placement of SA in fusion can be 5 or 3
-            orient_sa: 5_u32,
+            orient_sa_upstream: true,
             // collection of target_break_pr values
             precision_pr: vec![530,530],
             // collection of target_break_sa values
@@ -2386,9 +2432,9 @@ mod tests {
             // strand of SA
             strand_sa: StrandDirection::Rev,
             // placement of primary match in fusion can be 5 or 3
-            orient_pr: 3_u32,
+            orient_pr_upstream: false,
             // placement of SA in fusion can be 5 or 3
-            orient_sa: 5_u32,
+            orient_sa_upstream: true,
             // collection of target_break_pr values
             precision_pr: vec![530,530],
             // collection of target_break_sa values
@@ -2444,9 +2490,9 @@ mod tests {
             // strand of SA
             strand_sa: StrandDirection::Rev,
             // placement of primary match in fusion can be 5 or 3
-            orient_pr: 3_u32,
+            orient_pr_upstream: false,
             // placement of SA in fusion can be 5 or 3
-            orient_sa: 5_u32,
+            orient_sa_upstream:true,
             // collection of target_break_pr values
             precision_pr: vec![530,530],
             // collection of target_break_sa values
@@ -2494,9 +2540,9 @@ mod tests {
             // strand of SA
             strand_sa: StrandDirection::Rev,
             // placement of primary match in fusion can be 5 or 3
-            orient_pr: 3_u32,
+            orient_pr_upstream: false,
             // placement of SA in fusion can be 5 or 3
-            orient_sa: 5_u32,
+            orient_sa_upstream: true,
             // collection of target_break_pr values
             precision_pr: vec![530,530],
             // collection of target_break_sa values
@@ -2535,7 +2581,7 @@ mod tests {
         // this is a single paired read pair which is both, a SR and SP
         let paired_bam = bam::Reader::from_path("test/test_paired/single_paired_1.bam").expect("ERROR: Could not open BAM file ");
         let (results,_ignore) = analyze_alignments_from_bam(paired_bam,None,0.95,true,false,None);
-        let mut test : FxHashMap<String, Vec<FullFusionEvidence>>  = FxHashMap::default();
+        let mut truth : FxHashMap<String, Vec<FullFusionEvidence>>  = FxHashMap::default();
         //: 
         let info = vec![
             FullFusionEvidence { 
@@ -2551,10 +2597,10 @@ mod tests {
                 query_break_sa: 89, 
                 strand_pr: StrandDirection::Rev, 
                 strand_sa: StrandDirection::Rev, 
-                orient_pr: 3, 
-                orient_sa: 5, 
+                orient_pr_upstream: false, 
+                orient_sa_upstream: true, 
                 aln_start_pr: 474, 
-                aln_start_sa: 92, 
+                aln_start_sa: 4, 
                 precision: None, 
                 support: 0 
             }, 
@@ -2566,20 +2612,20 @@ mod tests {
             query_name: String::from("EU432099.1_56_624_1:0:0_3:0:0_4"), 
             query_length: 150, 
             target_break_pr: 4, 
-            target_break_sa: 528, 
+            target_break_sa: 529, 
             query_break_pr: 89, 
             query_break_sa: 94, 
             strand_pr: StrandDirection::Rev, 
             strand_sa: StrandDirection::Rev, 
-            orient_pr: 5, 
-            orient_sa: 3, 
-            aln_start_pr: 93, 
+            orient_pr_upstream: true, 
+            orient_sa_upstream: false, 
+            aln_start_pr: 4, 
             aln_start_sa: 474, 
             precision: None, 
             support: 0 
         }];
-        test.insert(String::from("EU432099.1_56_624_1:0:0_3:0:0_4"),info);
-        assert_eq!(test,results);
+        truth.insert(String::from("EU432099.1_56_624_1:0:0_3:0:0_4"),info);
+        assert_eq!(truth,results);
     }
     // fn alignments_from_bam_paired2(){
     //     // this is a single paired read pair which is both, a SR and SP

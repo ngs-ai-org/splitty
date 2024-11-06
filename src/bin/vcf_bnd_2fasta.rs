@@ -9,9 +9,9 @@ use std::env;
 extern crate genefusion;
 use genefusion::lib::hts_lib_based::{*};
 //use genefusion::lib::common::{*};
-use rust_htslib::bcf::{Read as BcfRead};
+use rust_htslib::bcf::Read as BcfRead;
 use std::str;
-use std::path::Path;
+
 use bio::io::fasta::Writer;
 //use bio::alphabets::dna;
 
@@ -58,6 +58,13 @@ fn main() {
                 .help("the in silico sequence of the combined BND events")
                 .takes_value(true)
                 .required(true))
+            .arg(Arg::with_name("SIMPLE")
+                .short("s")
+                .long("simple-id")
+                .value_name("bool")
+                .help("simplify ID and description to InSilico_n")
+                .takes_value(false)
+                .required(false))
             // .arg(Arg::with_name("OUT2")
             //     .short("b")
             //     .long("bed")
@@ -85,7 +92,7 @@ fn main() {
                 .short("p")
                 .long("prefix")
                 .value_name("string")
-                .help("a prefix for the fasta header, can be e.g. sample name - will default to file name without prefix")
+                .help("a prefix for the fasta header, can be e.g. sample name - will default to file name without prefix. Simple argument will set default to empty")
                 .takes_value(true)
                 .required(false))
             // .arg(Arg::with_name("STRAND")
@@ -102,16 +109,8 @@ fn main() {
     let range      = matches.value_of("RANGE").unwrap().parse::<u32>().expect("ERROR: could not parse range option correctly!");
     let _stranded = matches.is_present("STRAND");
     let output    = matches.value_of("OUT").unwrap();
-    let sample    = match matches.value_of("PREFIX"){
-        None => {
-            let tmp  = match Path::new(&file).file_stem() {
-                Some(x) => x.to_str().unwrap(),
-                None => panic!("ERROR: could not extract basename from path!"),
-            };
-            tmp
-        },
-        Some(x) => x,
-    };
+    let simple_name= matches.is_present("SIMPLE");
+    let mut n_records : i32 = 0;
     
 
     // lets take now the input and read the VCF correctly:
@@ -133,6 +132,7 @@ fn main() {
             prev_record = entry.expect("ERROR: could not read 1st record of vcf file!"); 
             continue
         }else{
+            n_records+=1;
             let cur_record = entry.expect("ERROR: could not read 1st record of vcf file!");
             let id_1     = &prev_record.id() ;
             let id_2     = &cur_record.id() ;
@@ -161,9 +161,16 @@ fn main() {
                 &cur_record,
                 assembly,
                 range,
-                sample
             );
-            writer.write_record(&record).expect("ERROR: could not write fasta record!");
+            if simple_name {
+                let simple_record = bio::io::fasta::Record::with_attrs(
+                    &format!("InSilico_{}",n_records), 
+                    record.desc(), 
+                    record.seq());
+                    writer.write_record(&simple_record).expect("ERROR: could not write fasta record!");
+            }else{
+                writer.write_record(&record).expect("ERROR: could not write fasta record!");
+            }
             // if stranded {
             //     let tmp = bio::alphabets::dna::revcomp(record.seq());
             //     let new_record = bio::io::fasta::Record::with_attrs(record.id(), Some(&format!("{:?}/revComp",record.desc())),record.seq());
@@ -171,6 +178,7 @@ fn main() {
             // }
         };
     }
+    println!("INFO: {} records written",n_records);
 
 }
     

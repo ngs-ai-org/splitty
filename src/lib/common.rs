@@ -7,7 +7,7 @@ use std::fs::File;
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 use integer_sqrt::IntegerSquareRoot;
-use statistical::{standard_deviation};
+use statistical::standard_deviation;
 use std::io;
 use std::error::Error;
 use chrono::{DateTime, Local};
@@ -16,7 +16,7 @@ use std::str::from_utf8;
 use bio::alphabets::dna::revcomp;
 use bio::alphabets::dna::complement;
 use std::io::Read as IoRead;
-use log::{debug};
+use log::debug;
 use std::io::Write;
 use std::io::stdout;
 extern crate noodles;
@@ -107,12 +107,12 @@ pub struct CigarInfos {
     /// position of match on genome/contig
     /// 0-based
     pub fp_target: u64,
-    /// number of clipped position on 3' prime
+    /// number of clipped position on upstream
     /// 0-based
-    pub clip5: u32,
-    /// number of clipped position on 5' prime
+    pub upstream: u32,
+    /// number of clipped position on downstream
     /// .0-based
-    pub clip3: u32,
+    pub downstream: u32,
     /// gap compressed similarity score
     pub similarity: f32,
     /// length of the sequence (includes INs but no DELs)
@@ -153,16 +153,18 @@ pub struct AlignInfos {
     /// position of match on genome/contig
     /// .0-based
     pub fp_target: u64,
-    /// number of clipped position on 3' prime
-    pub clip5: u32,
-    /// number of clipped position on 5' prime
-    pub clip3: u32,
+    /// number of clipped position upstream
+    pub upstream: u32,
+    /// number of clipped position downstream
+    pub downstream: u32,
     /// gap compressed similarity score
     pub similarity: f32,
     /// length of the sequence (includes INs but no DELs and CLIP)
     pub seq_length: u32,
     /// length with splicing of match (includes INDELS and N, and CLIP)
     pub match_length_s: u32,
+    /// length with splicing of match (only matches and mismatchs)
+    pub match_length: u32,
     /// position of match on query
     /// .0-based
     pub fp_query: u32,
@@ -239,9 +241,9 @@ pub struct FullFusionEvidence {
     /// strand of SA
     pub strand_sa: StrandDirection,
     /// placement of primary match in fusion
-    pub orient_pr: u32,
+    pub orient_pr_upstream: bool,
     /// placement of SA in fusion
-    pub orient_sa: u32,
+    pub orient_sa_upstream: bool,
     /// fusion position of primary alignment
     /// .0-based
     pub aln_start_pr: u64,
@@ -282,10 +284,10 @@ pub struct PosBasedFusEvidence {
     pub strand_pr: StrandDirection,
     /// strand of SA
     pub strand_sa: StrandDirection,
-    /// placement of primary match in fusion can be 5 or 3
-    pub orient_pr: u32,
-    /// placement of SA in fusion can be 5 or 3
-    pub orient_sa: u32,
+    /// placement of primary match in fusion 
+    pub orient_pr_upstream: bool,
+    /// placement of SA in fusion 
+    pub orient_sa_upstream: bool,
     /// collection of target_break_pr values
     pub precision_pr: Vec<u64>,
     /// collection of target_break_sa values
@@ -380,7 +382,7 @@ enum Keeper  {
 
 
 
-#[derive(Debug)]
+#[derive(Debug,PartialEq)]
 #[derive(Clone)]
 /// this has many parallels to the richer structure "FullFusionEvidence"
 /// but drops some of the information as not anymore needed 
@@ -1036,28 +1038,25 @@ pub fn parse_chrom_file(
 /// very useful for tests with external files and to verify that the results is identical
 /// to a previously manually generated result file
 pub fn is_same_file(
-    file1: &str, 
-    file2: &str
+    file1: &Path, 
+    file2: &Path
 ) -> Result<bool, std::io::Error> {
-    let f1 = File::open(file1)?;
-    let f2 = File::open(file2)?;
+    println!("INFO: comparing file1 {:?} and file2 with each other {:?}", file1.to_str(), file2.to_str());
+    let f1 = File::open(file1).expect("ERROR: could not open file");
+    let f2 = File::open(file2).expect("ERROR: could not open file");
+    
 
-    // Check if file sizes are different
-    if f1.metadata().unwrap().len() != f2.metadata().unwrap().len() {
-        return Ok(false);
-    }
     // Use buf readers since they are much faster
-    let f1 = BufReader::new(f1);
-    let f2 = BufReader::new(f2);
+    let f1r = BufReader::new(f1);
+    let f2r = BufReader::new(f2);
 
     // Do a byte to byte comparison of the two files
-    for (b1, b2) in f1.bytes().zip(f2.bytes()) {
+    for (b1, b2) in f1r.bytes().zip(f2r.bytes()) {
         if b1.unwrap() != b2.unwrap() {
             return Ok(false);
         }
     }
-
-    Ok(true)
+   Ok(true)
 }
 
 /// this takes an indexed FASTA reader and return a sequence as a string
@@ -1676,6 +1675,7 @@ pub fn bedpe_collapsed_pairs(
     };
 
     for (key,value) in collapsed_pairs {
+        debug!("Key {:?}, value {:?}",key,value);
         // this will squash entries if there are >1 per sample
         // might be a bit debatable in a biological sense but
         // might be absolutely necessary for a proper output format eventually
@@ -2208,10 +2208,12 @@ pub fn bnd_pairs_clustered (
                     );
                 // so this is now an iterator which must contain only 1 entry
                 let mut z = 0;
+                debug!("compl_in_range: {:?}",compl_in_range);
                 for cluster_range in compl_in_range {
                     debug!("Found for entry {:?} a complementary range {:?}", entry ,cluster_range);
                     z+=1;
                     if z > 1 {
+                        
                         panic!("ERROR: there should be only 1 matching cluster found!");
                     }
                     // here we generate now our key which is actually
@@ -2440,11 +2442,12 @@ pub fn eval_supp_align(
                     cigar:          cigar.to_string(),
                     chrom:          target.to_string(),
                     fp_target:      x.fp_target,
-                    clip5:          x.clip5,
-                    clip3:          x.clip3,
+                    upstream:       x.upstream,
+                    downstream:     x.downstream,
                     similarity:     x.similarity,
                     seq_length    : x.seq_length,
                     match_length_s: x.match_length_s,
+                    match_length:   x.match_length,
                     fp_query:       x.fp_query,
                     aln_start:      x.aln_start,
                     aln_end:        x.aln_end,
@@ -2501,7 +2504,7 @@ pub fn parse_gtf_annotation(
     // now we read line by line, skip header and push
     // for each chromosome a vector with our structure
     let mut gff_system  = GtfSource::UNKNOWN;
-    let mut ignored_lines : i16 = 0;
+    let mut ignored_lines : i32 = 0;
     for (line_number,line) in reader.lines().enumerate() {
         let l = line.expect("Unable to read line");
         // if we have a header or comments skip
@@ -2953,7 +2956,7 @@ pub fn calc_align_properties(
 /// truth4.fp_target      = 49_u64;
 /// truth4.aln_start      = 0_u64;
 /// truth4.aln_end        = 49;
-/// truth4.clip3          = 25_u32;
+/// truth4.downstream     = 25_u32;
 /// truth4.seq_length     = 75_u32;
 /// truth4.match_length   = 50_u32;
 /// truth4.match_length_s = 50_u32;
@@ -2968,7 +2971,7 @@ pub fn calc_align_properties(
 /// truth5.fp_target      = 49_u64;
 /// truth5.aln_start      = 49_u64;
 /// truth5.aln_end        = 73;
-/// truth5.clip5          = 50_u32;
+/// truth5.upstream       = 50_u32;
 /// truth5.seq_length     = 75_u32;
 /// truth5.match_length   = 25_u32;
 /// truth5.match_length_s = 25_u32;
@@ -3007,10 +3010,10 @@ pub fn  eval_cigar(
         let down_match = Regex::new(r".*?([0-9]+)[H|S]$").unwrap();
 
         for m in up_match.captures_iter(ciggi) {
-            infos.clip5 = m[1].parse().unwrap();
+            infos.upstream = m[1].parse().unwrap();
         }
         for m in down_match.captures_iter(ciggi) {
-            infos.clip3 = m[1].parse().unwrap();
+            infos.downstream = m[1].parse().unwrap();
         }
 
         ///////////////////////////
@@ -3083,8 +3086,8 @@ pub fn  eval_cigar(
         //// get breakpoint ////
         ////////////////////////
         let breakpoints = calc_align_properties(
-            infos.clip5,
-            infos.clip3,
+            infos.upstream,
+            infos.downstream,
             infos.seq_length,
             infos.match_length_s,
             *match_start,
@@ -3111,7 +3114,6 @@ pub fn  eval_cigar(
 }
 
 
-
 /// this takes now our accumulated information
 /// and tries to provide a proper return of
 /// the direction order and position of the
@@ -3119,7 +3121,7 @@ pub fn  eval_cigar(
 /// removes entries which are too close
 /// All coordinates are 0 based
 /// 
-/// Unittest: FALSE
+/// Unittest: TRUE
 ///
 pub fn evaluate_and_predict(
     primary_infos: AlignInfos,
@@ -3135,82 +3137,117 @@ pub fn evaluate_and_predict(
         // aligned piece and which is the 3'part and adjust as well
         // coordinates accordingly
 
-        let mut orient1    : Option<u32> = None;
+        let mut orient1_up : Option<bool> = None;
         let mut f_begin1   : Option<u64> = Some(primary_infos.aln_start );
         let mut fp_target1 : Option<u64> = Some(primary_infos.fp_target );
-        let mut orient2    : Option<u32> = None;
+        let mut orient2_up : Option<bool> = None;
         let mut f_begin2   : Option<u64> = Some(align.aln_start);
         let mut fp_target2 : Option<u64> = Some(align.fp_target );
         
+        // Lets mix up things and evaluate the similarity between clipping information and match length
+        // of the corresponding one. It should deal better with ambigious cases
+        
+        // PRIMARY ALIGNMENT 
+        let up_diff = ((primary_infos.upstream as i64) - ( align.match_length as i64)).abs() as u32;
+        let down_diff = ((primary_infos.downstream as i64) - ( align.match_length as i64)).abs() as u32;
+        debug!("PR: up_diff difference absolute {} down_diff difference absolute {} ", up_diff,down_diff);
+        // the assumption is that the one which is smaller indicates which clipping direction
+        // is the more likely one
+
         // PRIMARY ALIGNMENT 
         //
-        // 3' positioned
-        if (( primary_infos.clip5 > primary_infos.clip3) & (primary_infos.match_strand ==  StrandDirection::Fwd )) |
-			((primary_infos.clip5 < primary_infos.clip3) & (primary_infos.match_strand ==  StrandDirection::Rev )){
-            orient1    = Some(3);    
+        // upstream positioned
+        if (( up_diff>down_diff) & (primary_infos.match_strand ==  StrandDirection::Fwd )) |
+        ((up_diff<down_diff) & (primary_infos.match_strand ==  StrandDirection::Rev )){
+            
+            orient1_up    = Some(true);    
             if primary_infos.match_strand ==  StrandDirection::Fwd {
+                debug!("Primary is upstream and FWD",);
                 // verified and correct
-                f_begin1   = Some(primary_infos.aln_end);
+                f_begin1   = Some(primary_infos.aln_start);
                 fp_target1 = Some(fp_target1.unwrap() );
             }else{
+                debug!("Primary is upstream and REF",);
                 // verified and correct
-                f_begin1   = Some(primary_infos.aln_start );
-                fp_target1 = Some(fp_target1.unwrap() );
+                f_begin1   = Some(primary_infos.aln_start);
+                fp_target1 = Some(fp_target1.unwrap());
             }
-        // 5' positioned
-        } else if ((primary_infos.clip5 < primary_infos.clip3) & (primary_infos.match_strand == StrandDirection::Fwd)) |
-			      ((primary_infos.clip5 > primary_infos.clip3) & (primary_infos.match_strand == StrandDirection::Rev)) {
-            orient1 = Some(5);
+        // downstream positioned
+        } else if ((up_diff<down_diff) & (primary_infos.match_strand == StrandDirection::Fwd)) |
+			      ((up_diff>down_diff ) & (primary_infos.match_strand == StrandDirection::Rev)) {
+            orient1_up = Some(false);
             if primary_infos.match_strand == StrandDirection::Fwd {
+                debug!("Primary is downstream and FWD",);
                 // verified and correct
-                f_begin1 = Some(f_begin1.unwrap());
+                f_begin1 = Some(primary_infos.aln_start);
+                fp_target1 = Some(primary_infos.aln_start );
+
             }else{
+                debug!("Primary is downstream and REF",);
                 // verified and correct
-                fp_target1 = Some(f_begin1.unwrap() );
-                f_begin1   = Some(primary_infos.aln_end);
+                fp_target1 = Some(primary_infos.aln_end );
+                f_begin1   = Some(primary_infos.aln_start);
             }
         }
 
+        let up_diff_sa   = (( align.upstream as i64) - (primary_infos.match_length as i64)  ).abs() as u32;
+        let down_diff_sa = (( align.downstream as i64) - (primary_infos.match_length as i64)  ).abs() as u32;
+        debug!("SA: up_diff_sa difference absolute {} down_diff_sa difference absolute {} ", up_diff_sa,down_diff_sa);
+        // the assumption is that the one which is smaller indicates which clipping direction
+        // is the more likely one
+
         // SA ALIGNMENT 
         //
-        // 3' positioned
-        if (( align.clip5 > align.clip3) & (align.match_strand == StrandDirection::Fwd )) | 
-			((align.clip5 < align.clip3) & (align.match_strand == StrandDirection::Rev)) {
-            orient2    = Some(3);    
+        // upstream
+        if (( up_diff_sa>down_diff_sa) & (align.match_strand == StrandDirection::Fwd )) | 
+			((up_diff_sa<down_diff_sa) & (align.match_strand == StrandDirection::Rev)) {
+            orient2_up    = Some(true);    
             if align.match_strand == StrandDirection::Fwd {
-                // verified and correct
-                f_begin2   = Some(align.aln_end -1 );
-            }else{
+                debug!("SA is upstream and FWD",);
+
                 // verified and correct
                 f_begin2   = Some(align.aln_start);
-                fp_target2 = Some(fp_target2.unwrap() -1);
+                fp_target2 = Some(align.aln_end);
+
+            }else{
+                debug!("SA is upstream and REF",);
+
+                // verified and correct
+                f_begin2   = Some(align.aln_start);
+                fp_target2 = Some(align.aln_start);
 
             }
-        // 5' positioned
-        } else if ((align.clip5 < align.clip3) & (align.match_strand == StrandDirection::Fwd)) | 
-				((  align.clip5 > align.clip3) & (align.match_strand == StrandDirection::Rev) ) {
-            orient2    = Some(5);
+        // downstream
+        } else if ((up_diff_sa<down_diff_sa) & (align.match_strand == StrandDirection::Fwd)) | 
+				((  up_diff_sa>down_diff_sa) & (align.match_strand == StrandDirection::Rev) ) {
+            orient2_up    = Some(false);
             if align.match_strand == StrandDirection::Fwd {
-                // verified and correct
-                fp_target2 = Some(fp_target2.unwrap() -1);
-            }else{
+                debug!("SA is downstream and FWD",);
+
                 // verified and correct
                 fp_target2 = Some(fp_target2.unwrap());
-                f_begin2   = Some(align.aln_end -1 );
+                f_begin2   = Some(align.aln_start);
+            }else{
+                debug!("SA is downstream and REF",);
+
+                // verified and correct
+                fp_target2 = Some(fp_target2.unwrap());
+                f_begin2   = Some(align.aln_start);
             }
 
         } 
         // Now if both break information are contradictive trash it
         // as well if it was not resolved
-        if (orient1.unwrap() == orient2.unwrap())
-            | (orient1.is_none())
-            | (orient2.is_none()) 
-            | (fp_target1.is_none())
-            | (fp_target2.is_none()) 
-            | (f_begin1.is_none()) 
-            | (f_begin2.is_none())
+        if orient1_up.is_none() | orient2_up.is_none() |  fp_target1.is_none()  | fp_target2.is_none() | f_begin1.is_none() | f_begin2.is_none()
         {
-			//eprintln!("INFO: Removed entry primary {:?} with SA {:?} as fusion positions ambiguous", primary_infos,align);
+            
+			debug!("INFO: Removed entry primary {:?} with SA {:?} as fusion positions ambiguous", primary_infos,align);
+            debug!("INFO: orient1 {:?} orient2 {:?} fp_target1 {:?} fp_target2 {:?} f_begin1 {:?} f_begin2 {:?}",orient1_up,orient2_up,fp_target1,fp_target2,f_begin1,f_begin2);
+            continue;
+        }else if  orient1_up.unwrap() == orient2_up.unwrap() {
+            eprintln!("WARNING: opposing information discovered in evaluting sense of fusion - this should not happen!");
+            debug!("INFO: Removed entry primary {:?} with SA {:?} as fusion positions ambiguous", primary_infos,align);
+            debug!("INFO: orient1 {:?} orient2 {:?} fp_target1 {:?} fp_target2 {:?} f_begin1 {:?} f_begin2 {:?}",orient1_up,orient2_up,fp_target1,fp_target2,f_begin1,f_begin2);
             continue;
         }
         
@@ -3229,8 +3266,8 @@ pub fn evaluate_and_predict(
             query_break_sa:  align.fp_query as u64,
             strand_pr:       primary_infos.match_strand,
             strand_sa:       align.match_strand,
-            orient_pr:       orient1.unwrap(),
-            orient_sa:       orient2.unwrap(),
+            orient_pr_upstream:       orient1_up.unwrap(),
+            orient_sa_upstream:       orient2_up.unwrap(),
             aln_start_pr:    f_begin1.unwrap(),
             aln_start_sa:    f_begin2.unwrap(),
             // for both the below values we have
@@ -3335,8 +3372,8 @@ pub fn prune_read_based_organization(
                         query_break_sa:  double_check.query_break_pr,
                         strand_pr:       check.strand_pr,
                         strand_sa:       double_check.strand_pr,
-                        orient_pr:       check.orient_pr,
-                        orient_sa:       double_check.orient_pr,
+                        orient_pr_upstream:       check.orient_pr_upstream,
+                        orient_sa_upstream:       double_check.orient_pr_upstream,
                         aln_start_pr:    check.aln_start_pr,
                         aln_start_sa:    double_check.aln_start_pr,
                         precision,
@@ -3367,8 +3404,8 @@ pub fn prune_read_based_organization(
                     query_break_sa:  check.query_break_sa,
                     strand_pr:       check.strand_pr,
                     strand_sa:       check.strand_sa,
-                    orient_pr:       check.orient_pr,
-                    orient_sa:       check.orient_sa,
+                    orient_pr_upstream:       check.orient_pr_upstream,
+                    orient_sa_upstream:       check.orient_sa_upstream,
                     aln_start_pr:    check.aln_start_pr,
                     aln_start_sa:    check.aln_start_sa,
                     precision,
@@ -3413,7 +3450,7 @@ pub fn prune_read_based_organization(
 /// it can obtain a gene name or a gene ID. If that fails it defaults 
 /// to NA
 /// 
-/// Unittest: FALSE
+/// Unittest: TRUE
 ///
 pub fn get_gene_name(
     attributes: &FxHashMap<String,String>
@@ -3425,6 +3462,8 @@ pub fn get_gene_name(
     }else if attributes.contains_key("gene_id"){
         attributes.get("gene_id").unwrap().to_owned()
     }else{
+        //eprintln!("I got no name from {:?}", attributes);
+        
         String::from("NA")
     }
 }
@@ -3457,7 +3496,7 @@ pub fn add_fusion_annotation_read_based(
     // first lets verify if the chromosome is actually in annotation
     // if not we panic here
     if !annot2.contains_key(&out.a_chrom) | !annot2.contains_key(&out.b_chrom){
-        eprintln!("WARNING: No annotation available for one of chromosomes from entry {:?}",out);
+        debug!("WARNING: No annotation available for one of chromosomes from entry {:?}",out);
     }
     // there are now essentially 3 scenarios to test
 	// - candidate region is outside gene annotation region --> drop it
@@ -3484,7 +3523,7 @@ pub fn add_fusion_annotation_read_based(
             }
             // now we get a matching gene name field
             result_a.feature_name = get_gene_name(&feature.attribute);
-            //dbg!(&result_a);
+            debug!("feature name: {:?}",&result_a.feature_name );
 
             if sug_feature_a.is_empty()  {
                 sug_feature_a.push(result_a);    
@@ -3652,7 +3691,7 @@ pub fn add_fusion_annotation_read_based(
     }else{
         eprintln!("ERROR: feature evaluation not successful for {:?}",out);
     }
-    //dbg!(&my_return);
+    
     my_return
 }
 
@@ -3686,7 +3725,7 @@ pub fn add_fusion_annotation_pos_based(
     // first lets verify if the chromosome is actually in annotation
     // if not we panic here
     if !annot2.contains_key(&out.a_chrom) | !annot2.contains_key(&out.b_chrom){
-        eprintln!("WARNING: No annotation available for one of chromosomes from entry {:?}",out);
+        debug!("WARNING: No annotation available for one of chromosomes from entry {:?}",out);
     }
     // there are now essentially 3 scenarios to test
 	// - candidate region is outside gene annotation region --> drop it
@@ -3887,7 +3926,12 @@ pub fn add_fusion_annotation_pos_based(
 /// and annotation if available and formats the  output accordingly. 
 /// All coordinates are 0 based.
 /// 
-/// Unittest: FALSE
+/// Notion: if no annotation is provided, gene fusion names will default to 
+/// the chromosome e.g. chr3--chr5 , if there is annnotation provided
+/// it will become GeneA--GeneB or in case of missing annotation for a region
+/// GeneA--NA or NA--NA
+/// 
+/// Unittest: TRUE
 ///
 pub fn format_and_annotate_read_based_fusions(
     read_collection: FxHashMap<String, Vec<FullFusionEvidence>>,
@@ -3927,14 +3971,12 @@ pub fn format_and_annotate_read_based_fusions(
             
             // now we define the order which one is
             // 5' and 3' for the output formatting
-
-            match attributes.orient_pr {
-                5 => {
-                    result.fusion_genes[0]= format!(
-                        "{}--{}",
-                        attributes.chrom_pr.to_owned(),
-                        attributes.chrom_sa.to_owned()
-                    );
+            result.fusion_genes[0] = match gtf.is_some() {
+                true => format!("{}--{}","NA","NA"),
+                false => format!("{}--{}",attributes.chrom_sa.to_owned(), attributes.chrom_pr.to_owned())
+            };
+            match attributes.orient_pr_upstream {
+                true => {
                     result.a_chrom     = attributes.chrom_pr.to_owned();
                     result.a_strand    = attributes.strand_pr;
                     if attributes.aln_start_pr < attributes.target_break_pr {
@@ -3954,12 +3996,7 @@ pub fn format_and_annotate_read_based_fusions(
                         result.b_end   = attributes.aln_start_sa;
                     }
                 }
-                3 => {
-                    result.fusion_genes[0] = format!(
-                        "{}--{}",
-                        attributes.chrom_sa.to_owned(),
-                        attributes.chrom_pr.to_owned()
-                    );
+                false => {
                     result.a_chrom     = attributes.chrom_sa.to_owned();
                     result.a_strand    = attributes.strand_sa;
                     if attributes.aln_start_sa < attributes.target_break_sa {
@@ -3979,10 +4016,6 @@ pub fn format_and_annotate_read_based_fusions(
                         result.b_end   = attributes.aln_start_pr;
                     }
                 }
-                _ => panic!(
-                    "ERROR: formatting orientation lead to non 3/5 value for {}!",
-                    cdna
-                ),
             };
             if result.a_chrom == result.b_chrom {
                 // A located 5' of B
@@ -4038,12 +4071,12 @@ pub fn format_and_annotate_read_based_fusions(
             }else{
                 panic!("ERROR: GeneB strand not correctly annotated!");
             }
-
+            //println!("result: {:?}", result);
             // this is now a complete output already
             // lets now see if we have a potential annotation
             // and accordingly annotate if possible
             if gtf.is_some() {
-                let mut annotated =add_fusion_annotation_read_based(result,&gtf,stranded); 
+                let mut annotated = add_fusion_annotation_read_based(result,&gtf,stranded); 
                 output.append(&mut annotated);
             }else{
                 output.push(result);
@@ -4069,7 +4102,7 @@ pub fn format_and_annotate_pos_based_fusions(
 ) -> Vec<PrinciplePosBasedFusionOutput> {
 
     let mut output : Vec<PrinciplePosBasedFusionOutput> = Vec::new();
-    for (cdna, entries) in read_collection.iter() {
+    for (_cdna, entries) in read_collection.iter() {
         // after annotation it is possible that we generate more 
         // than one entry again per item as we cant always resolve 
         // underlying genes perfectly
@@ -4123,12 +4156,12 @@ pub fn format_and_annotate_pos_based_fusions(
             };
             // now we only define the order which one is
             // 5' and 3' for the output formatting
-            match attributes.orient_pr {
-                5 => {
+            match attributes.orient_pr_upstream {
+                true => {
                     result.fusion_genes[0]= format!(
                         "{}--{}",
-                        attributes.chrom_pr.to_owned(),
-                        attributes.chrom_sa.to_owned()
+                        "NA",
+                        "NA"
                     );
                     result.a_chrom     = attributes.chrom_pr.to_owned();
                     result.a_strand    = attributes.strand_pr;
@@ -4150,7 +4183,7 @@ pub fn format_and_annotate_pos_based_fusions(
                         result.b_end   = aln_start_sa_med;
                     }
                 }
-                3 => {
+                false => {
                     result.fusion_genes[0] = format!(
                         "{}--{}",
                         attributes.chrom_sa.to_owned(),
@@ -4175,10 +4208,7 @@ pub fn format_and_annotate_pos_based_fusions(
                         result.b_end   = aln_start_pr_med;
                     }
                 }
-                _ => panic!(
-                    "ERROR: formatting orientation lead to non 3/5 value for {}!",
-                    cdna
-                ),
+                
             };
             if result.a_chrom == result.b_chrom {
                 // A located 5' of B
@@ -4423,8 +4453,8 @@ pub fn read_based_2_pos_based_fusions(
                     target_break_sa: evidence.target_break_sa,
                     strand_pr    : evidence.strand_pr,
                     strand_sa    : evidence.strand_sa,
-                    orient_pr    : evidence.orient_pr,
-                    orient_sa    : evidence.orient_sa,
+                    orient_pr_upstream    : evidence.orient_pr_upstream,
+                    orient_sa_upstream    : evidence.orient_sa_upstream,
                     precision_pr : vec![evidence.target_break_pr],
                     precision_sa : vec![evidence.target_break_sa],
                     aln_start_pr : vec![evidence.aln_start_pr],
@@ -4450,8 +4480,8 @@ pub fn read_based_2_pos_based_fusions(
                             elements.chrom_sa == evidence.chrom_sa &&
                             elements.strand_pr == evidence.strand_pr &&
                             elements.strand_sa == evidence.strand_sa && 
-                            elements.orient_pr == evidence.orient_pr &&
-                            elements.orient_sa == evidence.orient_sa && 
+                            elements.orient_pr_upstream == evidence.orient_pr_upstream &&
+                            elements.orient_sa_upstream == evidence.orient_sa_upstream && 
                             u32::try_from(
                                 (evidence.target_break_pr.abs_diff(elements.target_break_pr)) * (evidence.target_break_pr.abs_diff(elements.target_break_pr))
                                 .integer_sqrt()
@@ -4485,13 +4515,13 @@ pub fn read_based_2_pos_based_fusions(
                             (
                                 elements.strand_pr != evidence.strand_pr &&
                                 elements.strand_sa != evidence.strand_sa && 
-                                elements.orient_pr != evidence.orient_pr &&
-                                elements.orient_sa != evidence.orient_sa 
+                                elements.orient_pr_upstream != evidence.orient_pr_upstream &&
+                                elements.orient_sa_upstream != evidence.orient_sa_upstream 
                             ) | (
                                 elements.strand_pr == evidence.strand_pr &&
                                 elements.strand_sa == evidence.strand_sa && 
-                                elements.orient_pr == evidence.orient_pr &&
-                                elements.orient_sa == evidence.orient_sa 
+                                elements.orient_pr_upstream == evidence.orient_pr_upstream &&
+                                elements.orient_sa_upstream == evidence.orient_sa_upstream 
                             )
                         ) & (
                             u32::try_from(( (evidence.target_break_pr.abs_diff(elements.target_break_pr)) * (evidence.target_break_pr.abs_diff(elements.target_break_pr)) ).integer_sqrt()).expect("ERROR: could not cast range into u32!") < range && 
@@ -4525,8 +4555,8 @@ pub fn read_based_2_pos_based_fusions(
                         target_break_sa: evidence.target_break_sa,
                         strand_pr    : evidence.strand_pr,
                         strand_sa    : evidence.strand_sa,
-                        orient_pr    : evidence.orient_pr,
-                        orient_sa    : evidence.orient_sa,
+                        orient_pr_upstream    : evidence.orient_pr_upstream,
+                        orient_sa_upstream    : evidence.orient_sa_upstream,
                         precision_pr : vec![evidence.target_break_pr],
                         precision_sa : vec![evidence.target_break_sa],
                         aln_start_pr : vec![evidence.aln_start_pr],
@@ -4755,7 +4785,7 @@ mod tests {
         truth2.fp_target       = 68346459_u64;
         truth2.aln_start       = 68346459_u64;
         truth2.aln_end         = 68384691;
-        truth2.clip5           = 2172_u32;
+        truth2.upstream        = 2172_u32;
         truth2.seq_length      = 3002_u32;
         truth2.match_length    = 757_u32;
         truth2.match_length_s  = 38233_u32;
@@ -4773,8 +4803,8 @@ mod tests {
         truth6.fp_target      = 117828459_u64;
         truth6.aln_start      = 117824209_u64;
         truth6.aln_end        = 117828459;
-        truth6.clip5          = 0_u32;
-        truth6.clip3          = 831_u32;
+        truth6.upstream       = 0_u32;
+        truth6.downstream     = 831_u32;
         truth6.seq_length     = 2499_u32;
         truth6.match_length   = 1668_u32;
         truth6.match_length_s = 4251_u32;
@@ -4792,8 +4822,8 @@ mod tests {
         truth7.fp_target      = 46288851_u64;
         truth7.aln_start      = 46288851_u64;
         truth7.aln_end        = 46288970;
-        truth7.clip5          = 102_u32;
-        truth7.clip3          = 0_u32;
+        truth7.upstream       = 102_u32;
+        truth7.downstream     = 0_u32;
         truth7.seq_length     = 222_u32;
         truth7.match_length   = 120_u32;
         truth7.match_length_s = 120_u32;
@@ -4811,8 +4841,8 @@ mod tests {
         truth8.fp_target      = 132018176_u64;
         truth8.aln_start      = 132018176_u64;
         truth8.aln_end        = 132018278;
-        truth8.clip5          = 119_u32;
-        truth8.clip3          = 0_u32;
+        truth8.upstream       = 119_u32;
+        truth8.downstream     = 0_u32;
         truth8.seq_length     = 222_u32;
         truth8.match_length   = 103_u32;
         truth8.match_length_s = 103_u32;
@@ -4830,8 +4860,8 @@ mod tests {
         truth9.fp_target      = 193165994_u64;
         truth9.aln_start      = 193165994_u64;
         truth9.aln_end        = 193185136;
-        truth9.clip5          = 619_u32;
-        truth9.clip3          = 0_u32;
+        truth9.upstream       = 619_u32;
+        truth9.downstream     = 0_u32;
         truth9.seq_length     = 1690_u32;
         truth9.match_length   = 1071_u32;
         truth9.match_length_s = 19143_u32;
@@ -4849,8 +4879,8 @@ mod tests {
         truth10.fp_target      = 134086443_u64;
         truth10.aln_start      = 134086443_u64;
         truth10.aln_end        = 134087066;
-        truth10.clip5          = 1066_u32;
-        truth10.clip3          = 0_u32;
+        truth10.upstream       = 1066_u32;
+        truth10.downstream     = 0_u32;
         truth10.seq_length     = 1690_u32;
         truth10.match_length   = 624_u32;
         truth10.match_length_s = 624_u32;
@@ -5541,5 +5571,285 @@ mod tests {
         };
         assert_eq!(result,test);
     }
+
+    #[test]
+    // test based on easy fragment fusion event
+    fn test_orientation_fwd_rev(){
+
+        let primary_infos =  AlignInfos { 
+            query: String::from("transcript/196704;full_length_coverage=33;length=984;NpolyAremoved=0;noPolyA"),
+            q_length: 984,
+            cigar: String::from("7S79=891N76=5875N7=1X139=1452N95=580S"),
+            chrom: String::from("chr7"),
+            fp_target: 55200409,
+            upstream: 7,
+            downstream: 580,
+            similarity: 99.74811,
+            seq_length: 984,
+            match_length_s: 8615,
+            match_length:397,
+            fp_query: 403,
+            aln_start: 55191795,
+            aln_end: 55200409,
+            match_strand: StrandDirection::Fwd 
+        };
+
+        let mut sa_infos : Vec<AlignInfos> = Vec::new();
+
+        let new_info = AlignInfos { 
+            query: String::from("transcript/196704;full_length_coverage=33;length=984;NpolyAremoved=0;noPolyA"),
+            q_length: 984,
+            cigar: String::from("177S403=404S"),
+            chrom: String::from("chr7"),
+            fp_target: 55796094,
+            upstream: 177,
+            downstream: 404,
+            similarity: 100.0,
+            seq_length: 984,
+            match_length_s: 403,
+            match_length:403,
+            fp_query: 404,
+            aln_start: 55795692,
+            aln_end: 55796094,
+            match_strand: StrandDirection::Rev
+         };
+         sa_infos.push(new_info);
+
+         let mut truth : Vec<FullFusionEvidence> = Vec::new();
+         let truth_event = FullFusionEvidence { 
+            cigar_pr: String::from("7S79=891N76=5875N7=1X139=1452N95=580S"),
+            cigar_sa: String::from("177S403=404S"),
+            chrom_pr: String::from("chr7"),
+            chrom_sa: String::from("chr7"),
+            query_name: String::from("transcript/196704;full_length_coverage=33;length=984;NpolyAremoved=0;noPolyA"),
+            query_length: 984,
+            target_break_pr: 55200409,// manually checked
+            target_break_sa: 55796094,// manually checked
+            query_break_pr: 403,
+            query_break_sa: 404,
+            strand_pr: StrandDirection::Fwd,
+            strand_sa: StrandDirection::Rev,
+            orient_pr_upstream: true,
+            orient_sa_upstream: false,
+            aln_start_pr: 55191795, // manually checked
+            aln_start_sa: 55795692, // manually checked
+            precision: None,
+            support: 0 
+        };
+        
+        truth.push(truth_event);
+
+        let result = evaluate_and_predict(primary_infos,sa_infos);
+        assert_eq!(truth,result);
+    }
+    
+    #[test]
+    // test based on easy fragment fusion event
+    fn test_orientation_fwd_fwd(){
+
+        let primary_infos =  AlignInfos { 
+            query: String::from("transcript/192912;full_length_coverage=48;length=984;NpolyAremoved=0;noPolyA"),
+            q_length: 984,
+            cigar: String::from("409S101=511N147=413N131=189N19=177S"),
+            chrom: String::from("chr1"),
+            fp_target: 156874907,
+            upstream: 409,
+            downstream: 177,
+            similarity: 100.0,
+            seq_length: 984,
+            match_length_s: 1511,
+            match_length: 398,
+            fp_query: 409,
+            aln_start: 156874907,
+            aln_end: 156876417,
+            match_strand: StrandDirection::Fwd
+        };
+
+        let mut sa_infos : Vec<AlignInfos> = Vec::new();
+
+        let new_info = AlignInfos { 
+            query: String::from("transcript/192912;full_length_coverage=48;length=984;NpolyAremoved=0;noPolyA"),
+            q_length: 984,
+            cigar: String::from("7S243=15342N159=575S"),
+            chrom: String::from("chr1"),
+            fp_target: 156130774,
+            upstream: 7,
+            downstream: 575,
+            similarity: 100.0,
+            seq_length: 984,
+            match_length_s: 15744,
+            match_length: 402,
+            fp_query: 408,
+            aln_start: 156115031,
+            aln_end: 156130774,
+            match_strand: StrandDirection::Fwd
+         };
+         sa_infos.push(new_info);
+
+         let mut truth : Vec<FullFusionEvidence> = Vec::new();
+         let truth_event = FullFusionEvidence { 
+            cigar_pr: String::from("409S101=511N147=413N131=189N19=177S"),
+            cigar_sa: String::from("7S243=15342N159=575S"),
+            chrom_pr: String::from("chr1"),
+            chrom_sa: String::from("chr1"),
+            query_name: String::from("transcript/192912;full_length_coverage=48;length=984;NpolyAremoved=0;noPolyA"),
+            query_length: 984, 
+            target_break_pr: 156874907, // manually checked
+            target_break_sa: 156130774, // manually checked
+            query_break_pr: 409, 
+            query_break_sa: 408, 
+            strand_pr: StrandDirection::Fwd,
+            strand_sa: StrandDirection::Fwd,
+            orient_pr_upstream: false,
+            orient_sa_upstream: true,
+            aln_start_pr: 156874907, // manually checked
+            aln_start_sa: 156115031, // manually checked
+            precision: None, 
+            support: 0
+        };
+        truth.push(truth_event);
+
+        let result = evaluate_and_predict(primary_infos,sa_infos);
+        assert_eq!(truth,result);
+    }
+    
+    #[test]
+    fn test_orientation_ref_fwd(){
+
+        let primary_infos =  AlignInfos { 
+            query: String::from("transcript/210380;full_length_coverage=33;length=887;NpolyAremoved=0;noPolyA"),
+            q_length: 887,
+            cigar: String::from("577S216=1X86=7S"),
+            chrom: String::from("chr10"),
+            fp_target: 59906121,
+            upstream: 577,
+            downstream: 7,
+            similarity: 99.66997,
+            seq_length: 887,
+            match_length_s: 303,
+            match_length: 303,
+            fp_query: 309,
+            aln_start: 59906121,
+            aln_end: 59906423,
+            match_strand: StrandDirection::Rev
+        };
+
+        let mut sa_infos : Vec<AlignInfos> = Vec::new();
+
+        let new_info = AlignInfos { 
+            query: String::from("transcript/210380;full_length_coverage=33;length=887;NpolyAremoved=0;noPolyA"),
+            q_length: 887,
+            cigar: String::from("310S148=1641N22=1X85=1050N144=177S"),
+            chrom: String::from("chr10"),
+            fp_target: 43116583,
+            upstream: 310,
+            downstream: 177,
+            similarity: 99.5,
+            seq_length: 887,
+            match_length_s: 3091,
+            match_length: 400,
+            fp_query: 310,
+            aln_start: 43116583,
+            aln_end: 43119673,
+            match_strand: StrandDirection::Fwd
+         };
+         sa_infos.push(new_info);
+
+         let mut truth : Vec<FullFusionEvidence> = Vec::new();
+         let truth_event = FullFusionEvidence { 
+            cigar_pr: String::from("577S216=1X86=7S"),
+            cigar_sa: String::from("310S148=1641N22=1X85=1050N144=177S"),
+            chrom_pr: String::from("chr10"),
+            chrom_sa: String::from("chr10"),
+            query_name: String::from("transcript/210380;full_length_coverage=33;length=887;NpolyAremoved=0;noPolyA"),
+            query_length: 887,
+            target_break_pr: 59906121,// manually checked
+            target_break_sa: 43116583,// manually checked
+            query_break_pr: 309,
+            query_break_sa: 310,
+            strand_pr: StrandDirection::Rev,
+            strand_sa: StrandDirection::Fwd,
+            orient_pr_upstream: true,
+            orient_sa_upstream: false,
+            aln_start_pr: 59906121,// manually checked
+            aln_start_sa: 43116583,// manually checked
+            precision: None,
+            support: 0
+        };
+        truth.push(truth_event);
+
+        let result = evaluate_and_predict(primary_infos,sa_infos);
+        assert_eq!(truth,result);
+    }
+
+    #[test]
+    fn test_orientation_rev_rev(){
+
+        let primary_infos =  AlignInfos { 
+            query: String::from("transcript/240115;full_length_coverage=52;length=662;NpolyAremoved=0;noPolyA"),
+            q_length: 662,
+            cigar: String::from("177S212=130040N86=9096N105=82S"),
+            chrom: String::from("chr21"),
+            fp_target: 38445409,
+            upstream: 177,
+            downstream: 82,
+            similarity: 100.0,
+            seq_length: 662,
+            match_length_s: 139539,
+            match_length: 403,
+            fp_query: 484,
+            aln_start: 38445409,
+            aln_end: 38584947,
+            match_strand: StrandDirection::Rev
+        };
+
+        let mut sa_infos : Vec<AlignInfos> = Vec::new();
+
+        let new_info = AlignInfos { 
+            query: String::from("transcript/240115;full_length_coverage=52;length=662;NpolyAremoved=0;noPolyA"),
+            q_length: 662,
+            cigar: String::from("580S75=7S"),
+            chrom: String::from("chr21"),
+            fp_target: 41508083,
+            upstream: 580,
+            downstream: 7,
+            similarity: 100.0,
+            seq_length: 662,
+            match_length_s: 75,
+            match_length: 75,
+            fp_query: 81,
+            aln_start: 41508083,
+            aln_end: 41508157,
+            match_strand: StrandDirection::Rev
+         };
+         sa_infos.push(new_info);
+
+         let mut truth : Vec<FullFusionEvidence> = Vec::new();
+         let truth_event = FullFusionEvidence { 
+            cigar_pr: String::from("177S212=130040N86=9096N105=82S"),
+            cigar_sa: String::from("580S75=7S"),
+            chrom_pr: String::from("chr21"),
+            chrom_sa: String::from("chr21"),
+            query_name: String::from("transcript/240115;full_length_coverage=52;length=662;NpolyAremoved=0;noPolyA"),
+            query_length: 662,
+            target_break_pr: 38584947,// manually checked
+            target_break_sa: 41508083,// manually checked
+            query_break_pr: 484,
+            query_break_sa: 81,
+            strand_pr: StrandDirection::Rev,
+            strand_sa: StrandDirection::Rev,
+            orient_pr_upstream: false,
+            orient_sa_upstream: true,
+            aln_start_pr: 38445409, // manually checked
+            aln_start_sa: 41508083, // manually checked
+            precision: None,
+            support: 0
+        };
+        truth.push(truth_event);
+
+        let result = evaluate_and_predict(primary_infos,sa_infos);
+        assert_eq!(truth,result);
+    }
+    
     
 }

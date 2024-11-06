@@ -1,0 +1,20 @@
+##fileformat=VCFv4.2
+##FILTER=<ID=PASS,Description="All filters passed">
+##source=splitty:0.8.8
+##source_author=Emanuel Schmid-Siegert <emanuel.schmid-siegert@selexis.com>
+##INFO=<ID=MATEID,Number=1,Type=String,Description="the ID of the 2nd part from the BND events">
+##FILTER=<ID=SPLITTY_FAILED,Description="splitty events which are likely FP events : CIPOS >10 || CIPOS not determined">
+##INFO=<ID=GENE_FUSION,Number=.,Type=String,Description="Suggested fusion partner genes">
+##INFO=<ID=FRAG_ID,Number=1,Type=String,Description="Name of the queried fragment">
+##INFO=<ID=SVTYPE,Number=1,Type=String,Description="Type of structural variant">
+##INFO=<ID=CIPOS,Number=2,Type=Integer,Description="Confidence interval around POS for imprecise variants">
+##INFO=<ID=FRAG_POS,Number=1,Type=Integer,Description="Position of the fusion on the fragment">
+##contig=<ID=Super-Scaffold_26,length=179461985,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=xxx1023_Hc,length=7498,assembly=ConcatenatedGenomeAndReference.fasta>
+##contig=<ID=xxx1023_Lc,length=6903,assembly=ConcatenatedGenomeAndReference.fasta>
+##INFO=<ID=FRAG_SP,Number=1,Type=Integer,Description="Split read pairs after remapping, supporting the fusion point">
+##INFO=<ID=FRAG_SR,Number=1,Type=Integer,Description="Split reads after remapping, supporting the fusion point">
+##bcftools_annotateVersion=1.9+htslib-1.9
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+Super-Scaffold_26	147754673	NGSAI_GENEFUSION_FID.2.1	T	]xxx1023_Hc:652]T	0	SPLITTY_FAILED	SVTYPE=BND;CIPOS=-19,19;GENE_FUSION=Super-Scaffold_26--slx1023_Hc;FRAG_ID=NODE_3_length_7029_cov_269.021001_g0_i2;FRAG_POS=605;MATEID=NGSAI_GENEFUSION_FID.2.2;FRAG_SP=37;FRAG_SR=172
+xxx1023_Hc	652	NGSAI_GENEFUSION_FID.2.2	A	A[Super-Scaffold_26:147754673[	0	SPLITTY_FAILED	SVTYPE=BND;CIPOS=-19,19;GENE_FUSION=Super-Scaffold_26--slx1023_Hc;FRAG_ID=NODE_3_length_7029_cov_269.021001_g0_i2;FRAG_POS=605;MATEID=NGSAI_GENEFUSION_FID.2.1;FRAG_SP=37;FRAG_SR=172
