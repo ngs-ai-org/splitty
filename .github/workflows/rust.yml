@@ -17,7 +17,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Prep
-      run: sudo apt-get update && apt-get install -y  cmake libclang-dev
+      run: sudo apt-get update && sudo apt-get install -y  cmake libclang-dev
     - name: Build
       run: cargo build --verbose
     - name: Run tests
