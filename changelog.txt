@@ -1,5 +1,7 @@
 
 # Changelog
+## 1.0.2
+- update README
 ## 1.0.1
 - hot fix for issue of ambigious fragment orientation of both pieces
 - update readme for cluster
@@ -25,4 +27,120 @@
 - added in vcf_bnd_2fasta the "simple" option to have simple names of the fasta entries
 ## v0.8.6
 - added in VCF of fragments additional information concerning the position of the fusion on the fragment, similar to the TSV output
-
+## v0.8.5
+- subset: read all in RAM then treat instead of on the fly, paves way for non-paired entries and unsorted VCFs 
+- subset: natural sorting of output entries by ID
+- subset: debug entries from Isoseq pipeline with additional fields.
+- subset: more log information 
+- tree from BEDPE: more log information
+- all: some cleaning and linting
+## v0.8.4
+- fixed another bug at the beginning of contigs
+## v0.8.3
+- corrected corner case for nucleotide at last position of contig for subsetting
+## v0.8.2
+- corrected corner case for nucleotide at last position of contig
+- more unit-tests
+- correcting for 0 position
+## v0.8.1
+- fixed sv_cluster, when exceeding contig length
+## v0.8.1
+- fixed splitty annotation bug when annotation started at 1st base (#64)
+## v0.8.0
+- fixed CIPOS not being read correctly and silently failing 
+- removed option in vcf_sv_cluster to write to file, stdout only for the moment
+- unit-test:
+    - locus_dist_based_groups
+    - bnd_collapse_pairs
+## v0.7.9
+- fixed issue #7 and provide ratio handle 
+- added additional unittest for the above
+- fixed unittest issue #45 (deleted function)
+## v 0.7.8
+ - added step to verify in paired not going below 0 for CIPOS 
+ - fixed missing events for start=0 or the end of the contig 
+ - more unit tests (calc_align_test4,splitP_2_splitR_addition,alignments_from_bam_paired1)
+ - fixed bug vcf position paired #16
+ - annotated for all if at least one unittest is availabe and filed all other as issue in gitlab
+ - unittest: 
+    - median_u64
+    - bnd_pairs_clustered
+    - chr_dist_based_groups
+    - vcf_parsing_tree
+    - bnd_filter_pairs
+    - parse_fofn
+    - parse_chroms_txt
+    - parse_chrom_file
+ - broke precision
+## v 0.7.7
+ - CIPOS format fixed from e.g. 10/10 to -10/10 instead (reading and writing)
+ - CIPOS if no information available not 0 anymore but absent in VCF entry 
+## v 0.7.6
+ - pretty logging
+ - adding unittests for the clustering part 
+ - correcting coordinates in clustering 
+ - cleaning and fixing 0/1 bugs in many functions 
+ - more unittests for detection of fusions
+ - cluster program takes now single vcf if needed
+ - cluster program allows now to write either stdout or file
+## v 0.7.5
+- fixed bug where wrong SA led to query position larger than length of molecule
+- fixed bug where query position was smaller or equal to uncertainty 
+- more unit-tests 
+## v 0.7.3
+- fixed a bug where SA information led to negative value
+- new unit-tests for noodles 
+- added systematic logger for all functions and unit-tests
+- started to add debug logging information
+## v 0.7.1
+THIS WILL LEAD TO DIFFERENT RESULTS DUE TO SIMILARITY SCORE
+- important change cigar evaluation. There was a bug leading to wrong estimates on match length and similarity estimate.
+  This regards the usage of the function `eval_cigar` and the generation of the structure `CigarInfos`.
+- added unittest for eval_cigar and for `calc_gapcompressed_sim`.
+## v 0.6.4
+- starting to fix stuff in cigar evaluation
+## v 0.6.3
+- fix read2vcf in case a "+/-" is indicated
+## v 0.6.2
+- fix direction in cluster directions reporting 
+- check FR:REV as well in REF::FR for BEDPE events in vcf subsetting
+- quite some linting and cleaning again
+## v 0.6.1
+- added in read2vcf overlap feature and not anymore failing but removing unaccepted entries
+- more unit tests for read2vcf
+## v 0.6.0
+- fixed in read2vcf a coordination error and added tests
+- added more documentation in general 
+- minor stuff
+## v 0.5.9
+- correct_bnd_vcf officially deprecated and wont be supported anymore
+- complete change to unsigned integer for genomic coordinates instead of signed 
+- added more unit-tests
+- add vcf_chromremoval which selects from a VCF only events matching chromosome list
+- fixed but in vcf2fasta for rr events
+## v 0.5.8
+- fixed in read2vcf wrong direction in some cases - unittest added 
+- cleaned with clippy a lot
+## v 0.5.7
+- in vcf_bnd_subset the check of ID + mateID of pairs now based on "MATEID=" field
+- addition of read2vcf to translate BED formated read annotation in a VCF of BND single events 
+## v 0.5.6
+- added tool to subset a VCF based on BEDPE genomic regions
+- changed most (all?) genomic coordinates from i64 to u64
+- minor cleaning of the code
+## v 0.5.5
+- added the program vcf_bnd_2fasta which extracts the FASTA sequence from BND events in VCF files
+## v 0.5.4
+- added option "--unique-off" which accepts as well multi-mapping reads 
+## v 0.5.3
+- added for vcf a verification that does not extend beyond 0 and contigSize 
+## v 0.5.2
+- re-organization of libraries and renaming to be more coherent
+## v 0.5.1
+- de-construction of 2nd allele in BND events centralized
+- contruction of 2nd alllele BND events centralized
+## v 0.5.0
+- vcf_merge: ordered single B file out entries - previously unordered
+- splitty fragment and splitty paired: correct orientation of mate BND event
+- correct_bnd_vcf added to fix < v0.5.0 events in vcf files 
+- adding more unit tests
