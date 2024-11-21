@@ -3245,7 +3245,7 @@ pub fn evaluate_and_predict(
             debug!("INFO: orient1 {:?} orient2 {:?} fp_target1 {:?} fp_target2 {:?} f_begin1 {:?} f_begin2 {:?}",orient1_up,orient2_up,fp_target1,fp_target2,f_begin1,f_begin2);
             continue;
         }else if  orient1_up.unwrap() == orient2_up.unwrap() {
-            eprintln!("WARNING: opposing information discovered in evaluting sense of fusion - this should not happen!");
+            debug!("WARNING: opposing information discovered in evaluting sense of fusion - this should not happen!");
             debug!("INFO: Removed entry primary {:?} with SA {:?} as fusion positions ambiguous", primary_infos,align);
             debug!("INFO: orient1 {:?} orient2 {:?} fp_target1 {:?} fp_target2 {:?} f_begin1 {:?} f_begin2 {:?}",orient1_up,orient2_up,fp_target1,fp_target2,f_begin1,f_begin2);
             continue;
