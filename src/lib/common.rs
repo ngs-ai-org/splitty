@@ -2208,12 +2208,10 @@ pub fn bnd_pairs_clustered (
                     );
                 // so this is now an iterator which must contain only 1 entry
                 let mut z = 0;
-                debug!("compl_in_range: {:?}",compl_in_range);
                 for cluster_range in compl_in_range {
                     debug!("Found for entry {:?} a complementary range {:?}", entry ,cluster_range);
                     z+=1;
                     if z > 1 {
-                        
                         panic!("ERROR: there should be only 1 matching cluster found!");
                     }
                     // here we generate now our key which is actually
@@ -2222,18 +2220,12 @@ pub fn bnd_pairs_clustered (
                     // This should help to separate as well events if the direction
                     // is not identical.
                     let pair_entry = ClusterPairs {
-                        chr1: entry.data().chr1.clone(),
-                        range1: 
-                            range.start
-                            ..
-                            range.end,
-                        forward1: entry.data().forward1,
-                        chr2: entry.data().chr2.clone(),
-                        range2: 
-                            cluster_range.interval().start
-                            ..
-                            cluster_range.interval().end,
-                        forward2: entry.data().forward2,
+                        chr1      : entry.data().chr1.clone(),
+                        range1    : range.start..range.end,
+                        forward1  : entry.data().forward1,
+                        chr2      : entry.data().chr2.clone(),
+                        range2    : cluster_range.interval().start..cluster_range.interval().end,
+                        forward2  : entry.data().forward2,
                     };
                     if range_pairs.contains_key(&pair_entry){
                         range_pairs.get_mut(&pair_entry).unwrap().push(entry.data().clone());
@@ -3245,7 +3237,7 @@ pub fn evaluate_and_predict(
             debug!("INFO: orient1 {:?} orient2 {:?} fp_target1 {:?} fp_target2 {:?} f_begin1 {:?} f_begin2 {:?}",orient1_up,orient2_up,fp_target1,fp_target2,f_begin1,f_begin2);
             continue;
         }else if  orient1_up.unwrap() == orient2_up.unwrap() {
-            debug!("WARNING: opposing information discovered in evaluting sense of fusion - this should not happen!");
+            eprintln!("WARNING: opposing information discovered in evaluting sense of fusion - this should not happen!");
             debug!("INFO: Removed entry primary {:?} with SA {:?} as fusion positions ambiguous", primary_infos,align);
             debug!("INFO: orient1 {:?} orient2 {:?} fp_target1 {:?} fp_target2 {:?} f_begin1 {:?} f_begin2 {:?}",orient1_up,orient2_up,fp_target1,fp_target2,f_begin1,f_begin2);
             continue;

@@ -157,6 +157,7 @@ fn main() {
         &contigs
     );
     debug!("bnd_cluster_pairs {:?}",bnd_cluster_pairs);
+    
     // here we find potential clusters which have events that do not match the
     // pair, so we refine the event from the cluster and refine again the boundaries
     let bnd_refined_pairs   = bnd_filter_pairs(bnd_cluster_pairs,range);
@@ -714,7 +715,7 @@ mod tests {
     #[test]
     fn vcf_parsing_3(){
         // For this one, one of the positions is at the max length
-        // of the contig and will have to be corrected for
+        // of the contig 
         let vcf_in   = String::from("test/vcf_cluster/corner_case3.vcf");
         let chrom_in = String::from("test/vcf_cluster/corner_case3.length");
         let contigs  = parse_chrom_file(&chrom_in);
@@ -726,7 +727,22 @@ mod tests {
             false,
         );
     }
-
+    #[test]
+    #[should_panic]
+    fn vcf_parsing_5(){
+        // For this one, one of the positions is beyond the max length and should 
+        // fail
+        let vcf_in   = String::from("test/vcf_cluster/exceed_chrom.vcf");
+        let chrom_in = String::from("test/vcf_cluster/corner_case3.length");
+        let contigs  = parse_chrom_file(&chrom_in);
+        let _tree = vcf_parsing_tree(
+            &vcf_in,
+            1,
+            &contigs,
+            false,
+            false,
+        );
+    }
     #[test]
     #[should_panic]
     fn vcf_parsing_4(){

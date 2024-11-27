@@ -1,5 +1,8 @@
 
 # Changelog
+## 1.0.3
+- BREAKING CHANGE: clustering of variants does NOT include CIPOS anymore to extend range
+- fixing bug where unbalanced CIPOS led to issues
 ## 1.0.2
 - update README
 ## 1.0.1

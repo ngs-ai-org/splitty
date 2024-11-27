@@ -1398,39 +1398,34 @@ pub fn vcf_parsing_tree(
             let allele_2 = str::from_utf8(alleles[1]).expect("ERROR: could not convert allele!");
             let name  : Option<String> = None;
             // if an entry has an annotated CIPOS, this is currently supported then
-            // NOTE: I did not find a proper way yet to test if e.g. multipe CIPOS exist and invalidate our test!
-            let (mut left, mut right) : (u64,u64) = (0,0);
-            let cipos = get_cipos(&record);
-            if cipos.is_some() {
-                let positions =  cipos.unwrap();
-                if positions.len() !=2 {
-                    panic!("ERROR: CIPOS encountered with !=2 entries!");
-                }else{
-                    left  = u64::try_from(positions[0]).unwrap() ;
-                    right = u64::try_from(positions[1]).unwrap() ;
-                }
-            }
+            // NOTE: This was currently removed as I believe that we should not include this.
+            // It raises many technical questions (e.g. that we dont have CIPOS for 2nd position readily available)
+            // but as well general ones (should ranges be extended based on uncertainty) - this should be rather
+            // controled by the user through the range option instead
+            //let (mut left, mut right) : (u64,u64) = (0,0);
+            //let cipos = get_cipos(&record);
+            //lets not change the position here just yet because we would
+            //not find later anymore matching mateID entries
+            // if cipos.is_some() {
+            //     let positions =  cipos.unwrap();
+            //     if positions.len() !=2 {
+            //         panic!("ERROR: CIPOS encountered with !=2 entries!");
+            //     }else{
+            //         left  = u64::try_from(positions[0]).unwrap() ;
+            //         right = u64::try_from(positions[1]).unwrap() ;
+            //     }
+            // }
 
             if sv_type == SVType::BndPair {
                 // avoid dropping below 0
-                let mut st1   = match fp1.cmp(&left){
-                    std::cmp::Ordering::Equal => 0,
-                    std::cmp::Ordering::Greater => fp1 - left,
-                    std::cmp::Ordering::Less => 0
-                } ;
+                let st1   = fp1;
                 // avoid exceeding length of chrom (-1 as 0 based)
-                let end1  = match chr_length.cmp(&(fp1 + right +1)){
-                    std::cmp::Ordering::Equal   => chr_length-1,
-                    std::cmp::Ordering::Greater => fp1 + right +1,
-                    std::cmp::Ordering::Less    => chr_length-1,
+                // fp1: 56846 st1: 56846 chr_length: 56846  
+                let end1  = st1+1;
+                if end1 > chr_length+1 {
+                    panic!("ERROR: end {} exceeds length {}", end1, chr_length);
                 };
-                // nowe in case of extreme towards the end we can experience that start is
-                // last nucleotide and the end is last nucleotide 
-                debug!("start1: {}, end1: {}", st1, end1);
-                if end1 ==  chr_length-1 && st1==end1 {
-                    st1 = end1-1;
-                };
-                debug!("start1: {}, end1: {}", st1, end1);
+                
                 let add_fields : BNDentry;
                 // now if we have no proper pairs then we add it in single breakend events.
                 // actually as well something valid if the second part of the event is unknown
@@ -1488,29 +1483,23 @@ pub fn vcf_parsing_tree(
                     // as the API of vcf is returning 0-based
                     // and mine as well
                     let chr2         = allele_deconstr.chr.clone();
-                    let chr2_length     = contigs.get(&chr2).expect("ERROR: chromosome not existing or no length associated!!");
+                    let chr2_length    = contigs.get(&chr2).expect("ERROR: chromosome not existing or no length associated!!");
                     
                     debug!("What is second allele: {:?}",&allele_deconstr);
+                    // We must not change here the mate position as the CIPOS
+                    // is only defining the first of the pairs
                     // here we avoid going below 0 (which we cant with the type)
-                    let mut st2   = match allele_deconstr.pos.cmp(&left){
-                        std::cmp::Ordering::Equal => 0,
-                        std::cmp::Ordering::Greater => allele_deconstr.pos - left,
-                        std::cmp::Ordering::Less => 0
-                    } ;
+                    let mut st2 = allele_deconstr.pos ;
                     // avoid exceeding length of chrom (-1 as 0 based)
                     // here we need the length of the chromosome2 and not chromosome1
-                    let end2  = match chr2_length.cmp(&(allele_deconstr.pos + right +1)){
-                        std::cmp::Ordering::Equal   => chr2_length-1,
-                        std::cmp::Ordering::Greater => allele_deconstr.pos + right +1,
-                        std::cmp::Ordering::Less    => chr2_length-1,
+                    let end2  = st2+1;
+                // avoid exceeding length of chrom (-1 as 0 based)
+                
+                    if end2 > chr2_length+1 {
+                        panic!("ERROR: end {} exceeds length {}", end2, chr2_length);
                     };
-                    debug!("start2: {}, end2: {}", st2, end2);
-                    // nowe in case of extreme towards the end we can experience that start is
-                    // last nucleotide and the end is last nucleotide 
-                    if end2 ==  chr2_length-1 && st2==end2 {
-                        st2 = end2-1;
-                    };
-                    debug!("start2: {}, end2: {}", st2, end2);
+
+                    println!("start2: {}, end2: {}", st2, end2);
 
                     // populate simple comparison structure
                     if ignore_dir {
@@ -1552,22 +1541,18 @@ pub fn vcf_parsing_tree(
                     }
                     debug!("BND entry contained the following fields: {:?}",add_fields);
                     let local_tree = bndpair_trees.get_mut(chromosome).expect("ERRROR: could not find chromosome in tree!");
-                    debug!("Inserting start {} and end {} for chr {} with fields {:?} into tree {:?}",st1,st2,chromosome,add_fields,local_tree);
+                    debug!("Inserting start {} and end {} for chr {} with fields {:?} into tree {:?}",st1,end1,chromosome,add_fields,local_tree);
                     local_tree.insert(st1..end1,add_fields);
                     debug!("Inserted now entry {:?}" ,bndpair_trees.get_mut(chromosome));
                     
                 } 
             }else if sv_type == SVType::INS || sv_type == SVType::DEL {
                 // avoid dropping below 0
-                let st   = match fp1.cmp(&left){
-                    std::cmp::Ordering::Equal => 0,
-                    std::cmp::Ordering::Greater => fp1 - left,
-                    std::cmp::Ordering::Less => 0
-                } ;
+                let st   = fp1;
                 // avoid exceeding length of chrom (-1 as 0 based)
-                let end  = match chr_length.cmp(&(fp1 + right +1)){
+                let end  = match chr_length.cmp(&(fp1  +1)){
                     std::cmp::Ordering::Equal   => chr_length-1,
-                    std::cmp::Ordering::Greater => fp1 + right +1,
+                    std::cmp::Ordering::Greater => fp1  +1,
                     std::cmp::Ordering::Less    => chr_length-1,
                 };
                 // populate simple comparison structure
@@ -1591,7 +1576,6 @@ pub fn vcf_parsing_tree(
     if unknown != 0 {
         eprintln!("WARNING: {} ignored features as not part of recognized features: BND(paired),INS,DEL",unknown);
     }
-
     FullSvTrees {
         bnd_pair  : bndpair_trees,
         bnd_single: bndsingle_trees,
@@ -2174,6 +2158,17 @@ mod tests {
             if record.pos() == 54074844 {
                 let result : Option<Vec<u32>> = get_cipos(&record);
                 assert_eq!(vec![0,0],result.unwrap());
+            }
+        }
+    }
+    #[test]
+    fn get_cipos_some3(){
+        let mut vcf = rust_htslib::bcf::Reader::from_path(&"test/vcf_cluster/sample_lowMQfiltered_reads_mini.vcf").expect("Error opening file.");
+        for res in vcf.records() {
+            let record = res.unwrap();
+            if record.pos() == 10255 {
+                let result : Option<Vec<u32>> = get_cipos(&record);
+                assert_eq!(vec![110,73],result.unwrap());
             }
         }
     }
