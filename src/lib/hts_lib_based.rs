@@ -1499,7 +1499,7 @@ pub fn vcf_parsing_tree(
                         panic!("ERROR: end {} exceeds length {}", end2, chr2_length);
                     };
 
-                    println!("start2: {}, end2: {}", st2, end2);
+                    debug!("start2: {}, end2: {}", st2, end2);
 
                     // populate simple comparison structure
                     if ignore_dir {
